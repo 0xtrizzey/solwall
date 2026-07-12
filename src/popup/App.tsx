@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { truncateAddress } from "../lib/format";
 import type { Snapshot } from "../lib/types";
 import { ToastHost } from "./components";
 import { IconActivity, IconChevronD, IconGear, IconGem, IconWallet, Logo } from "./icons";
 import { useRoute, useStore } from "./store";
+import { bg } from "./bg";
 import { Accounts } from "./screens/Accounts";
 import { Activity } from "./screens/Activity";
 import { Approval } from "./screens/Approval";
@@ -19,6 +20,23 @@ import { Unlock } from "./screens/Unlock";
 export function App() {
   const { snap } = useStore();
   const [route, nav] = useRoute();
+
+  useEffect(() => {
+    let lastHeartbeat = Date.now();
+    const ping = () => {
+      const now = Date.now();
+      if (now - lastHeartbeat > 30000) {
+        lastHeartbeat = now;
+        bg({ type: "heartbeat" }).catch(() => {});
+      }
+    };
+    window.addEventListener("mousemove", ping);
+    window.addEventListener("keydown", ping);
+    return () => {
+      window.removeEventListener("mousemove", ping);
+      window.removeEventListener("keydown", ping);
+    };
+  }, []);
 
   if (!snap) {
     return (

@@ -74,11 +74,16 @@ export function useStore(): Store {
 /** Copy text + toast feedback. */
 export function useCopy() {
   const { toast } = useStore();
+  const timer = useRef<number | null>(null);
   return useCallback(
     async (text: string, label = "Copied") => {
       try {
         await navigator.clipboard.writeText(text);
         toast(label, "success");
+        if (timer.current) window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(() => {
+          navigator.clipboard.writeText("").catch(() => {});
+        }, 45000);
       } catch {
         toast("Copy failed", "error");
       }

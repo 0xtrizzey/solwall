@@ -581,6 +581,12 @@ export async function handleMessage(
         return handleDapp(origin, msg.method, msg.params ?? {});
       }
 
+      case "heartbeat": {
+        const pub = await getPub();
+        resetAutoLock(pub.autoLockMinutes);
+        return ok(await snapshot());
+      }
+
       default:
         throw new Error(`Unknown message: ${(msg as { type?: string }).type}`);
     }
@@ -674,6 +680,10 @@ async function resolveApproval(id: string, approved: boolean, chosenPubkey?: str
     if (request.payload.kind === "connect") {
       const pubkey = chosenPubkey ?? pub.active?.pubkey;
       if (!pubkey) throw new Error("No account available");
+      
+      const exists = pub.wallets.some((w) => w.accounts.some((a) => a.pubkey === pubkey));
+      if (!exists) throw new Error("Account not found");
+
       pub.connectedSites[request.origin] = { pubkey, connectedAt: Date.now() };
       await setPub(pub);
       resolve({ ok: true, data: { publicKey: pubkey } });

@@ -119,36 +119,47 @@ export async function analyzeTransaction(
   txsB64: Uint8Array[],
   owner: string,
 ): Promise<TxAnalysis> {
-  const bytes = txsB64[0];
   const analysis: TxAnalysis = {
     status: "unknown",
     solDelta: null,
     lines: [],
     programs: [],
-    extraTxCount: Math.max(0, txsB64.length - 1),
+    extraTxCount: 0,
   };
 
-  try {
-    const { lines, programs } = decode(bytes, owner);
-    analysis.lines = lines;
-    analysis.programs = programs;
-  } catch {
-    // undecodable — simulation below still runs
-  }
+  const programSet = new Set<string>();
 
   try {
-    const [sim, current] = await Promise.all([
-      simulate(conn, bytes, owner),
-      conn.getBalance(new PublicKey(owner)).catch(() => null),
-    ]);
-    if (sim.err) {
-      analysis.status = "will-fail";
-      analysis.err = typeof sim.err === "string" ? sim.err : JSON.stringify(sim.err).slice(0, 120);
-    } else {
-      analysis.status = "ok";
+    const current = await conn.getBalance(new PublicKey(owner)).catch(() => null);
+    let totalSolDelta = 0;
+
+    for (let i = 0; i < txsB64.length; i++) {
+      const bytes = txsB64[i];
+      try {
+        const { lines, programs } = decode(bytes, owner);
+        analysis.lines.push(...lines);
+        programs.forEach(p => programSet.add(p));
+      } catch {
+        // undecodable — simulation below still runs
+      }
+
+      const sim = await simulate(conn, bytes, owner);
+      if (sim.err) {
+        analysis.status = "will-fail";
+        analysis.err = typeof sim.err === "string" ? sim.err : JSON.stringify(sim.err).slice(0, 120);
+        analysis.programs = [...programSet];
+        return analysis;
+      }
+
+      if (sim.ownerPostLamports != null && current != null) {
+        totalSolDelta += (sim.ownerPostLamports - current) / LAMPORTS;
+      }
     }
-    if (sim.ownerPostLamports != null && current != null) {
-      analysis.solDelta = (sim.ownerPostLamports - current) / LAMPORTS;
+
+    analysis.status = "ok";
+    analysis.programs = [...programSet];
+    if (current != null) {
+      analysis.solDelta = totalSolDelta;
     }
   } catch {
     analysis.status = "unknown";

@@ -14,7 +14,7 @@ const PRIVILEGED = new Set<string>([
   "addAccount", "renameAccount", "renameWallet", "removeWallet", "setActive", "setNetwork",
   "setAutoLock", "setFiat", "changePassword", "addAddress", "removeAddress",
   "revealMnemonic", "revealPrivateKey", "signAndSend", "signMessageLocal",
-  "revokeSite", "getApproval", "resolveApproval", "resetWallet",
+  "revokeSite", "getApproval", "resolveApproval", "resetWallet", "heartbeat",
 ]);
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
