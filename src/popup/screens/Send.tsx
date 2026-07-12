@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { formatAmount, formatSol, truncateAddress, b64FromBytes } from "../../lib/format";
+import { formatAmount, formatSol, truncateAddress, b64FromBytes, parseAmountToRaw } from "../../lib/format";
 import {
   buildSolTransfer,
   buildTokenTransfer,
@@ -13,7 +13,7 @@ import type { NetworkId, Snapshot } from "../../lib/types";
 import { friendlyRpcError, friendlyTxError } from "../../lib/errors";
 import { usePortfolio, type PortfolioRow } from "../balances";
 import { bg } from "../bg";
-import { Btn, Field, Sheet, TokenAvatar } from "../components";
+import { Btn, Field, Sheet, TokenAvatar, Identicon } from "../components";
 import { IconBack, IconCheck, IconChevronD, IconCopy, IconExternal, IconWarning } from "../icons";
 import { useCopy, useStore } from "../store";
 
@@ -50,9 +50,9 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
     const conn = makeConnection(snap.pub.network, snap.pub.customRpcUrl);
     if (!token) throw new Error("Select a token");
     if (token.isNative) {
-      return buildSolTransfer(conn, active.pubkey, to.trim(), Math.round(amountNum * 1e9));
+      return buildSolTransfer(conn, active.pubkey, to.trim(), parseAmountToRaw(amount, 9));
     }
-    return buildTokenTransfer(conn, active.pubkey, to.trim(), token.holding!, amountNum);
+    return buildTokenTransfer(conn, active.pubkey, to.trim(), token.holding!, parseAmountToRaw(amount, token.holding!.decimals));
   };
 
   const review = async () => {
@@ -232,7 +232,10 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
           <div className="review-rows">
             <div className="kv">
               <span>To</span>
-              <span className="mono">{truncateAddress(to.trim(), 6)}</span>
+              <span className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Identicon address={to.trim()} size={14} />
+                {truncateAddress(to.trim(), 6)}
+              </span>
             </div>
             <div className="kv">
               <span>Network</span>

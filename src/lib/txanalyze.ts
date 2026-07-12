@@ -20,6 +20,7 @@ export interface TxAnalysis {
   solDelta: number | null; // signer's SOL change from the tx (excl. network fee)
   lines: TxLine[];
   programs: string[];
+  hasUnknownPrograms: boolean;
   extraTxCount: number; // additional txs in a signAll batch, not analysed
   err?: string;
 }
@@ -62,12 +63,14 @@ function extractInstructions(bytes: Uint8Array): Ix[] {
   }));
 }
 
-function decode(bytes: Uint8Array, owner: string): { lines: TxLine[]; programs: string[] } {
+function decode(bytes: Uint8Array, owner: string): { lines: TxLine[]; programs: string[]; hasUnknownPrograms: boolean } {
   const lines: TxLine[] = [];
   const programSet = new Set<string>();
+  let hasUnknownPrograms = false;
   const ixs = extractInstructions(bytes);
 
   for (const ix of ixs) {
+    if (!KNOWN_PROGRAMS[ix.programId]) hasUnknownPrograms = true;
     programSet.add(KNOWN_PROGRAMS[ix.programId] ?? truncateAddress(ix.programId));
     const d = ix.data;
 
@@ -92,7 +95,7 @@ function decode(bytes: Uint8Array, owner: string): { lines: TxLine[]; programs: 
     }
   }
 
-  return { lines, programs: [...programSet] };
+  return { lines, programs: [...programSet], hasUnknownPrograms };
 }
 
 async function simulate(
@@ -124,6 +127,7 @@ export async function analyzeTransaction(
     solDelta: null,
     lines: [],
     programs: [],
+    hasUnknownPrograms: false,
     extraTxCount: 0,
   };
 
@@ -136,9 +140,10 @@ export async function analyzeTransaction(
     for (let i = 0; i < txsB64.length; i++) {
       const bytes = txsB64[i];
       try {
-        const { lines, programs } = decode(bytes, owner);
+        const { lines, programs, hasUnknownPrograms } = decode(bytes, owner);
         analysis.lines.push(...lines);
         programs.forEach(p => programSet.add(p));
+        if (hasUnknownPrograms) analysis.hasUnknownPrograms = true;
       } catch {
         // undecodable — simulation below still runs
       }

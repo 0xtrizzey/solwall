@@ -16,6 +16,14 @@ export function formatAmount(n: number, maxDecimals = 4): string {
   return n.toLocaleString("en-US", { maximumFractionDigits: maxDecimals });
 }
 
+export function parseAmountToRaw(uiAmountStr: string, decimals: number): bigint {
+  if (!uiAmountStr) return 0n;
+  const parts = uiAmountStr.replace(/,/g, "").split(".");
+  const intPart = parts[0] || "0";
+  const fracPart = (parts[1] || "").slice(0, decimals).padEnd(decimals, "0");
+  return BigInt(intPart + fracPart);
+}
+
 export function formatUsd(n: number | null | undefined): string {
   return formatFiat(n, "USD");
 }

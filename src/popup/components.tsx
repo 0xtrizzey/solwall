@@ -106,9 +106,46 @@ export function AddressChip({ address, chars = 4 }: { address: string; chars?: n
       }}
       title={address}
     >
+      <Identicon address={address} size={14} />
       <span className="mono">{truncateAddress(address, chars)}</span>
       {done ? <IconCheck size={13} /> : <IconCopy size={13} />}
     </button>
+  );
+}
+
+// ---- identicon ----
+
+export function Identicon({ address, size = 20 }: { address: string; size?: number }) {
+  let hash = 5381;
+  for (let i = 0; i < address.length; i++) {
+    hash = (hash * 33) ^ address.charCodeAt(i);
+  }
+  hash >>>= 0;
+
+  const colors = Array.from({ length: 9 }).map((_, i) => {
+    const bits = (hash >>> (i * 3)) & 0b111;
+    const hue = bits * 45; 
+    return `hsl(${hue} 70% 60%)`;
+  });
+
+  return (
+    <div
+      className="identicon"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        width: size,
+        height: size,
+        borderRadius: size * 0.15,
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      {colors.map((c, i) => (
+        <div key={i} style={{ backgroundColor: c }} />
+      ))}
+    </div>
   );
 }
 

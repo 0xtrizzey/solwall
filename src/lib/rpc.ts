@@ -190,7 +190,7 @@ export async function buildSolTransfer(
   conn: Connection,
   from: string,
   to: string,
-  lamports: number,
+  lamports: number | bigint,
 ): Promise<Transaction> {
   const fromPk = new PublicKey(from);
   const tx = new Transaction().add(
@@ -207,18 +207,17 @@ export async function buildTokenTransfer(
   from: string,
   to: string,
   holding: TokenHolding,
-  uiAmount: number,
+  rawAmount: bigint,
 ): Promise<Transaction> {
   const fromPk = new PublicKey(from);
   const toPk = new PublicKey(to);
   const mintPk = new PublicKey(holding.mint);
   const program = new PublicKey(holding.tokenProgram);
   const destAta = getAssociatedTokenAddress(mintPk, toPk, program);
-  const raw = BigInt(Math.round(uiAmount * 10 ** holding.decimals));
 
   const tx = new Transaction()
     .add(createAtaIdempotentInstruction(fromPk, destAta, toPk, mintPk, program))
-    .add(transferCheckedInstruction(new PublicKey(holding.ata), mintPk, destAta, fromPk, raw, holding.decimals, program));
+    .add(transferCheckedInstruction(new PublicKey(holding.ata), mintPk, destAta, fromPk, rawAmount, holding.decimals, program));
   const { blockhash } = await conn.getLatestBlockhash("confirmed");
   tx.recentBlockhash = blockhash;
   tx.feePayer = fromPk;

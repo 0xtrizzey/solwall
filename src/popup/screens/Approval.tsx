@@ -4,7 +4,7 @@ import { makeConnection } from "../../lib/rpc";
 import { analyzeTransaction, type TxAnalysis } from "../../lib/txanalyze";
 import type { ApprovalRequest, Snapshot } from "../../lib/types";
 import { bg } from "../bg";
-import { Btn } from "../components";
+import { Btn, Identicon } from "../components";
 import { IconLink, IconWarning, Logo } from "../icons";
 
 type State =
@@ -136,7 +136,10 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
               </div>
               <div className="kv">
                 <span>Account</span>
-                <span className="mono">{truncateAddress(snap.pub.connectedSites[request.origin]?.pubkey ?? "?", 6)}</span>
+                <span className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Identicon address={snap.pub.connectedSites[request.origin]?.pubkey ?? ""} size={14} />
+                  {truncateAddress(snap.pub.connectedSites[request.origin]?.pubkey ?? "?", 6)}
+                </span>
               </div>
             </div>
           </>
@@ -200,12 +203,17 @@ function TxPreview({ analysis, host }: { analysis: TxAnalysis | "loading" | null
       )}
       {analysis.programs.length > 0 && <div className="tx-programs">via {analysis.programs.join(" · ")}</div>}
       {analysis.extraTxCount > 0 && <div className="tx-note">+{analysis.extraTxCount} more transaction(s) in this request</div>}
-      {bareOk && (
+      {bareOk && analysis.hasUnknownPrograms ? (
+        <div className="callout danger">
+          <IconWarning size={16} />
+          🚨 HIGH RISK: This transaction interacts with unverified smart contracts but shows no balance changes. It may be a 'chameleon' contract attempting to evade security checks and drain your wallet. Only sign if you absolutely trust the dApp.
+        </div>
+      ) : bareOk && !analysis.hasUnknownPrograms ? (
         <div className="callout warn">
           <IconWarning size={16} />
           Limited preview — no balance change detected. Only approve if you trust {host}.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
