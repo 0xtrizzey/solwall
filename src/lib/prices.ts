@@ -17,7 +17,7 @@ async function jupPrices(mints: string[]): Promise<Record<string, number>> {
   for (const mint of mints) {
     const entry = body?.[mint];
     const p = Number(entry?.usdPrice ?? entry?.price);
-    if (isFinite(p) && p > 0) out[mint] = p;
+    if (isFinite(p) && p > 0 && p < 1_000_000) out[mint] = p;
   }
   return out;
 }
@@ -28,7 +28,7 @@ async function coingeckoSol(): Promise<number | null> {
     if (!res.ok) return null;
     const json = await res.json();
     const p = Number(json?.solana?.usd);
-    return isFinite(p) && p > 0 ? p : null;
+    return isFinite(p) && p > 0 && p < 1_000_000 ? p : null;
   } catch {
     return null;
   }
@@ -78,7 +78,12 @@ export async function fetchFiatRate(fiat: string): Promise<number> {
     const res = await fetch("https://open.er-api.com/v6/latest/USD");
     const json = await res.json();
     if (json?.rates && typeof json.rates === "object") {
-      fx.rates = json.rates;
+      const safeRates: Record<string, number> = {};
+      for (const [k, v] of Object.entries(json.rates)) {
+        const num = Number(v);
+        if (isFinite(num) && num > 0 && num < 100_000) safeRates[k] = num;
+      }
+      fx.rates = safeRates;
       fx.at = Date.now();
     }
   } catch {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { formatAmount, truncateAddress } from "../../lib/format";
+import { formatAmount, truncateAddress, parseAmountToRaw, bytesFromB64 } from "../../lib/format";
 import { getQuote, getSwapTransaction, type SwapQuote } from "../../lib/jupiter";
 import { explorerTxUrl, makeConnection, waitForSignature } from "../../lib/rpc";
+import { analyzeTransaction } from "../../lib/txanalyze";
 import { KNOWN_TOKENS, WSOL_MINT } from "../../lib/tokens";
 import type { Snapshot } from "../../lib/types";
 import { friendlyRpcError, friendlyTxError } from "../../lib/errors";
@@ -61,7 +62,7 @@ export function Swap({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }
     setQuoteState("loading");
     debounce.current = window.setTimeout(async () => {
       try {
-        const raw = BigInt(Math.round(amountNum * 10 ** from.decimals)).toString();
+        const raw = parseAmountToRaw(amount, from.decimals).toString();
         const q = await getQuote(from.mint, to.mint, raw);
         setQuote(q);
         setQuoteState("idle");
@@ -81,8 +82,22 @@ export function Swap({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }
     setPhase({ id: "swapping" });
     try {
       const txB64 = await getSwapTransaction(quote, active.pubkey);
-      const { signature } = await bg<{ signature: string }>({ type: "signAndSend", txB64 });
       const conn = makeConnection(snap.pub.network, snap.pub.customRpcUrl);
+
+      // Zero-Trust Security Verification
+      const analysis = await analyzeTransaction(conn, [bytesFromB64(txB64)], active.pubkey);
+      if (analysis.status === "will-fail") {
+        throw new Error("API returned a transaction that will fail on-chain. Aborting to save fees.");
+      }
+      if (from.mint === WSOL_MINT) {
+        const expectedSpent = Number(quote.inAmount) / 10 ** 9;
+        // solDelta is negative for spending. Allow a small buffer (0.05 SOL) for network/ATA rent fees.
+        if (analysis.solDelta != null && analysis.solDelta < -(expectedSpent + 0.05)) {
+          throw new Error("SECURITY ALERT: API compromise detected. Transaction attempts to drain more SOL than quoted.");
+        }
+      }
+
+      const { signature } = await bg<{ signature: string }>({ type: "signAndSend", txB64 });
       const status = await waitForSignature(conn, signature, 60_000);
       if (status === "failed") setPhase({ id: "failed", error: "Swap failed on-chain (slippage or expired quote). Nothing was taken beyond fees." });
       else {
