@@ -259,6 +259,12 @@ function openApprovalWindow(id: string): void {
 }
 
 function awaitApproval(origin: string, payload: ApprovalRequest["payload"]): Promise<BgResponse> {
+  for (const pending of pendingApprovals.values()) {
+    if (pending.request.origin === origin) {
+      return Promise.resolve({ ok: false, error: "A request is already pending for this origin" });
+    }
+  }
+
   const request: ApprovalRequest = { id: uid(), origin, payload, createdAt: Date.now() };
   return new Promise<BgResponse>((resolve) => {
     pendingApprovals.set(request.id, { request, resolve });
@@ -641,6 +647,26 @@ async function handleDapp(origin: string, method: DappMethod, params: DappParams
     case "signMessage": {
       if (!site) return { ok: false, error: "Not connected — call connect() first" };
       if (!params.messageB64) return { ok: false, error: "Missing message" };
+      
+      try {
+        const bytes = bytesFromB64(params.messageB64);
+        let isTx = false;
+        try {
+          VersionedTransaction.deserialize(bytes);
+          isTx = true;
+        } catch {
+          try {
+            Transaction.from(bytes);
+            isTx = true;
+          } catch {}
+        }
+        if (isTx) {
+          return { ok: false, error: "Security Error: Cannot sign a transaction via signMessage. Use signTransaction instead." };
+        }
+      } catch (e) {
+        return { ok: false, error: "Invalid message format" };
+      }
+
       return awaitApproval(origin, { kind: "signMessage", messageB64: params.messageB64 });
     }
 
@@ -648,12 +674,14 @@ async function handleDapp(origin: string, method: DappMethod, params: DappParams
     case "signAllTransactions": {
       if (!site) return { ok: false, error: "Not connected — call connect() first" };
       if (!params.txsB64?.length) return { ok: false, error: "Missing transaction" };
+      if (params.txsB64.length > 50) return { ok: false, error: "Too many transactions in a single request" };
       return awaitApproval(origin, { kind: "signTransaction", txsB64: params.txsB64, send: false });
     }
 
     case "signAndSendTransaction": {
       if (!site) return { ok: false, error: "Not connected — call connect() first" };
       if (!params.txsB64?.length) return { ok: false, error: "Missing transaction" };
+      if (params.txsB64.length > 50) return { ok: false, error: "Too many transactions in a single request" };
       return awaitApproval(origin, { kind: "signTransaction", txsB64: params.txsB64, send: true });
     }
 
