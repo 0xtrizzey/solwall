@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SOLWALL — dev preview</title>
+    <link rel="stylesheet" href="./dev.css" />
+    <style>
+      /* Frame the 375x600 popup like the real extension window. */
+      html, body { width: auto !important; height: 100vh !important; overflow: hidden; background: #060503 !important; }
+      body { display: grid; place-items: center; }
+      #root {
+        box-shadow: 0 0 0 1px rgba(242, 224, 190, 0.14), 0 30px 90px rgba(0, 0, 0, 0.7);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #0d0b07;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./dev.js"></script>
+  </body>
+</html>
