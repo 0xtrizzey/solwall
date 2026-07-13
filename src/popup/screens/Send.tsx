@@ -37,6 +37,7 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<Phase>({ id: "form" });
+  const [showContacts, setShowContacts] = useState(false);
 
   const token: PortfolioRow | undefined =
     mint === "sol" ? portfolio.rows.find((r) => r.isNative) : portfolio.rows.find((r) => r.mint === mint);
@@ -156,25 +157,73 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
             <IconChevronD size={16} />
           </button>
         </div>
-        <Field
-          label="To"
-          className="mono-input"
-          placeholder="Recipient's Solana address"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          error={toValid === false ? "That's not a valid Solana address." : selfSend ? "This is your own address." : null}
-          spellCheck={false}
-          autoComplete="off"
-        />
-        {(snap.addressBook ?? []).length > 0 && (
-          <div className="saved-addrs">
-            {(snap.addressBook ?? []).map((e) => (
-              <button key={e.address} type="button" className={`chip ${to.trim() === e.address ? "chip-right" : ""}`} onClick={() => setTo(e.address)}>
-                {e.name}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="to-field-wrapper" style={{ position: "relative" }}>
+          <Field
+            label="To"
+            className="mono-input"
+            placeholder="Recipient's Solana address"
+            value={to}
+            onChange={(e) => {
+               setTo(e.target.value);
+               setShowContacts(true);
+            }}
+            onFocus={() => setShowContacts(true)}
+            onBlur={() => setTimeout(() => setShowContacts(false), 200)}
+            error={toValid === false ? "That's not a valid Solana address." : selfSend ? "This is your own address." : null}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {showContacts && (snap.addressBook ?? []).length > 0 && (
+            <div className="contacts-dropdown" style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              background: "var(--surface-2)",
+              borderRadius: "8px",
+              boxShadow: "0 8px 16px rgba(0,0,0,0.5)",
+              zIndex: 10,
+              marginTop: "4px",
+              maxHeight: "160px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column"
+            }}>
+              {(snap.addressBook ?? [])
+                .filter(e => e.name.toLowerCase().includes(to.toLowerCase()) || e.address.includes(to))
+                .map((e) => (
+                <button
+                  key={e.address}
+                  type="button"
+                  style={{
+                    padding: "10px 12px",
+                    background: "none",
+                    border: "none",
+                    borderBottom: "1px solid var(--border)",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    color: "inherit"
+                  }}
+                  onMouseDown={(ev) => {
+                     // prevent blur from firing before onClick
+                     ev.preventDefault();
+                  }}
+                  onClick={() => {
+                    setTo(e.address);
+                    setShowContacts(false);
+                  }}
+                >
+                  <span style={{ fontWeight: 600, fontSize: "14px" }}>{e.name}</span>
+                  <span className="mono" style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
+                    {truncateAddress(e.address, 6)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Field
           label="Amount"
           className="mono-input"
