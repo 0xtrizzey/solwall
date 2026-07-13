@@ -1,0 +1,46 @@
+name: Reproducible Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Package Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Extension
+        run: npm run build
+
+      - name: Create Deterministic Zip
+        run: |
+          cd dist
+          # Set all file timestamps to a fixed epoch (Jan 1, 2026 00:00:00) for deterministic hashing
+          find . -exec touch -t 202601010000 {} +
+          # Zip files in strictly alphabetical order without extended file attributes (-X)
+          find . | LC_ALL=C sort | zip -X -@ ../solwall.zip
+          cd ..
+          
+          # Generate SHA-256 hash for verification
+          sha256sum solwall.zip > solwall.zip.sha256
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            solwall.zip
+            solwall.zip.sha256
+          generate_release_notes: true
