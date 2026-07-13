@@ -51,7 +51,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
         <Row
           left={<IconWallet size={18} />}
           title="Address book"
-          sub={snap.pub.addressBook.length === 0 ? "No saved addresses" : `${snap.pub.addressBook.length} saved`}
+          sub={(snap.addressBook ?? []).length === 0 ? "No saved addresses" : `${(snap.addressBook ?? []).length} saved`}
           right={<IconChevronR size={16} />}
           onClick={() => setSheet("addressbook")}
         />
@@ -260,9 +260,9 @@ function AddressBookSheet({ snap }: { snap: Snapshot }) {
 
   return (
     <>
-      {snap.pub.addressBook.length > 0 && (
-        <div className="menu-list" style={{ marginBottom: 12 }}>
-          {snap.pub.addressBook.map((e) => (
+      {(snap.addressBook ?? []).length > 0 && (
+        <div className="addr-list" style={{ marginBottom: 12 }}>
+          {(snap.addressBook ?? []).map((e) => (
             <div key={e.address} className="site-row">
               <div className="row-mid">
                 <div className="row-title">{e.name}</div>

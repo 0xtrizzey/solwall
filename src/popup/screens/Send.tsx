@@ -94,7 +94,7 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
             {phase.status === "timeout" && " — confirmation is taking longer than usual."}
           </p>
           <SolscanVerify signature={phase.signature} network={snap.pub.network} onCopy={copy} />
-          {!snap.pub.addressBook.some((e) => e.address === to.trim()) && (
+          {!(snap.addressBook ?? []).some((e) => e.address === to.trim()) && (
             <Btn
               size="md"
               variant="outline"
@@ -166,9 +166,9 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
           spellCheck={false}
           autoComplete="off"
         />
-        {snap.pub.addressBook.length > 0 && (
+        {(snap.addressBook ?? []).length > 0 && (
           <div className="saved-addrs">
-            {snap.pub.addressBook.map((e) => (
+            {(snap.addressBook ?? []).map((e) => (
               <button key={e.address} type="button" className={`chip ${to.trim() === e.address ? "chip-right" : ""}`} onClick={() => setTo(e.address)}>
                 {e.name}
               </button>

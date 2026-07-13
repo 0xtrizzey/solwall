@@ -40,6 +40,7 @@ export interface VaultWallet {
 export interface VaultSecrets {
   wallets: VaultWallet[];
   connectedSites?: Record<string, { pubkey: string; connectedAt: number }>;
+  addressBook?: AddressBookEntry[];
 }
 
 // ---- Public metadata (unencrypted, drives UI) ----
@@ -71,7 +72,6 @@ export interface PublicState {
   autoLockMinutes: number;
   /** ISO 4217 code for value display, e.g. "USD", "EUR". */
   fiat: string;
-  addressBook: AddressBookEntry[];
   hideNfts: boolean;
 }
 
@@ -80,6 +80,7 @@ export interface Snapshot {
   locked: boolean;
   pub: PublicState;
   connectedSites?: Record<string, { pubkey: string; connectedAt: number }>;
+  addressBook?: AddressBookEntry[];
 }
 
 // ---- dApp approval requests ----

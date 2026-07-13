@@ -149,21 +149,42 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
   // Token balance change for owner?
   const preTok = (meta.preTokenBalances ?? []).filter((b) => b.owner === owner);
   const postTok = (meta.postTokenBalances ?? []).filter((b) => b.owner === owner);
-  for (const post of postTok) {
-    const pre = preTok.find((p) => p.mint === post.mint);
+  
+  const tokenMints = Array.from(new Set([...preTok.map((b) => b.mint), ...postTok.map((b) => b.mint)]));
+  for (const mint of tokenMints) {
+    const pre = preTok.find((p) => p.mint === mint);
+    const post = postTok.find((p) => p.mint === mint);
     const preAmt = pre?.uiTokenAmount.uiAmount ?? 0;
-    const postAmt = post.uiTokenAmount.uiAmount ?? 0;
+    const postAmt = post?.uiTokenAmount.uiAmount ?? 0;
     const diff = postAmt - preAmt;
     if (Math.abs(diff) > 1e-9) {
-      const known = KNOWN_TOKENS[post.mint];
-      const sym = known?.symbol ?? post.mint.slice(0, 4);
+      const known = KNOWN_TOKENS[mint];
+      const sym = known?.symbol ?? mint.slice(0, 4);
       const sign = diff > 0 ? "+" : "−";
+      
+      let counterparty: string | undefined;
+      const otherPost = (meta.postTokenBalances ?? []).filter((b) => b.owner !== owner && b.mint === mint);
+      const otherPre = (meta.preTokenBalances ?? []).filter((b) => b.owner !== owner && b.mint === mint);
+      
+      const otherOwners = Array.from(new Set([...otherPre.map(b => b.owner), ...otherPost.map(b => b.owner)]));
+      for (const opOwner of otherOwners) {
+        if (!opOwner) continue;
+        const opPostAmt = otherPost.find(p => p.owner === opOwner)?.uiTokenAmount.uiAmount ?? 0;
+        const opPreAmt = otherPre.find(p => p.owner === opOwner)?.uiTokenAmount.uiAmount ?? 0;
+        const oDiff = opPostAmt - opPreAmt;
+        if ((diff < 0 && oDiff > 0) || (diff > 0 && oDiff < 0)) {
+          counterparty = opOwner;
+          break;
+        }
+      }
+
       return {
         ...base,
         kind: diff > 0 ? "received" : "sent",
         label: diff > 0 ? `Received ${sym}` : `Sent ${sym}`,
         delta: `${sign}${Math.abs(diff).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${sym}`,
         unverified: !known,
+        counterparty,
       };
     }
   }
@@ -175,11 +196,35 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
     if (Math.abs(diff) > 1e-9) {
       const sign = diff > 0 ? "+" : "−";
       const label = diff > 0 ? "Received SOL" : "Sent SOL";
+      
+      let counterparty: string | undefined;
+      for (const ix of tx.transaction.message.instructions) {
+        if ("parsed" in ix && ix.program === "system" && ix.parsed.type === "transfer") {
+          const info = ix.parsed.info;
+          if (info.source === owner) counterparty = info.destination;
+          else if (info.destination === owner) counterparty = info.source;
+          if (counterparty) break;
+        }
+      }
+      if (!counterparty) {
+        // Fallback to balance differences
+        for (let i = 0; i < meta.postBalances.length; i++) {
+          if (i === idx) continue;
+          let cDiff = (meta.postBalances[i] - meta.preBalances[i]) / 1e9;
+          if (i === 0) cDiff += (meta.fee ?? 0) / 1e9;
+          if ((diff < 0 && cDiff > 0) || (diff > 0 && cDiff < 0)) {
+            counterparty = keys[i]?.pubkey.toBase58();
+            if (counterparty) break;
+          }
+        }
+      }
+
       return {
         ...base,
         kind: diff > 0 ? "received" : "sent",
         label,
         delta: `${sign}${Math.abs(diff).toLocaleString("en-US", { maximumFractionDigits: 6 })} SOL`,
+        counterparty,
       };
     }
   }

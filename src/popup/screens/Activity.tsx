@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { dayLabel, formatTime } from "../../lib/format";
+import { dayLabel, formatTime, truncateAddress } from "../../lib/format";
 import { explorerTxUrl, fetchActivity, makeConnection, type ActivityItem } from "../../lib/rpc";
 import type { Snapshot } from "../../lib/types";
 import { friendlyRpcError } from "../../lib/errors";
-import { EmptyState, ErrorState, SkeletonRows } from "../components";
-import { IconActivity, IconExternal, IconLink, IconReceive, IconSend } from "../icons";
+import { EmptyState, ErrorState, SkeletonRows, Sheet, Field, Btn } from "../components";
+import { IconActivity, IconExternal, IconLink, IconReceive, IconSend, IconPlus } from "../icons";
+import { bg } from "../bg";
+import { useStore } from "../store";
 
 type State = { status: "loading" } | { status: "ready"; items: ActivityItem[] } | { status: "error"; message: string };
 
@@ -17,6 +19,10 @@ export function Activity({ snap }: { snap: Snapshot }) {
   const [state, setState] = useState<State>(
     cached && Date.now() - cached.at < 30_000 ? { status: "ready", items: cached.items } : { status: "loading" },
   );
+  
+  const { toast, refresh } = useStore();
+  const [saveContactAddress, setSaveContactAddress] = useState<string | null>(null);
+  const [contactName, setContactName] = useState("");
 
   const load = useCallback(async () => {
     setState((s) => (s.status === "ready" ? s : { status: "loading" }));
@@ -76,7 +82,36 @@ export function Activity({ snap }: { snap: Snapshot }) {
                   {item.label}
                   {item.unverified && <span className="unverified-badge" title="Unverified token">Unverified</span>}
                 </div>
-                <div className="row-sub">{formatTime(item.time)}</div>
+                <div className="row-sub" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {formatTime(item.time)}
+                  {item.counterparty && (
+                    <>
+                      <span>•</span>
+                      {(() => {
+                        const saved = (snap.addressBook ?? []).find((e) => e.address === item.counterparty);
+                        if (saved) return <span className="mono">{saved.name}</span>;
+                        return (
+                          <span className="mono" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {truncateAddress(item.counterparty, 4)}
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setContactName("");
+                                setSaveContactAddress(item.counterparty!);
+                              }}
+                              title="Save contact"
+                              style={{ width: 14, height: 14, background: "rgba(255,255,255,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                            >
+                              <IconPlus size={10} />
+                            </button>
+                          </span>
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
               </div>
               <div className={`act-delta mono ${item.delta.startsWith("+") ? "text-success" : ""}`}>{item.delta}</div>
               <IconExternal size={13} className="act-ext" />
@@ -84,6 +119,32 @@ export function Activity({ snap }: { snap: Snapshot }) {
           ))}
         </div>
       ))}
+      
+      <Sheet open={saveContactAddress !== null} onClose={() => setSaveContactAddress(null)} title="Save Recipient">
+        <div className="save-contact-form" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Field label="Address" className="mono-input" value={saveContactAddress || ""} readOnly />
+          <Field
+            label="Name"
+            placeholder="e.g. Alice"
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            autoFocus
+          />
+          <Btn
+            size="lg"
+            disabled={!contactName.trim()}
+            onClick={async () => {
+              if (!saveContactAddress) return;
+              await bg({ type: "addAddress", address: saveContactAddress, name: contactName.trim() });
+              await refresh();
+              toast("Contact saved", "success");
+              setSaveContactAddress(null);
+            }}
+          >
+            Save Contact
+          </Btn>
+        </div>
+      </Sheet>
     </div>
   );
 }

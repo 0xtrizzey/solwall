@@ -59,7 +59,6 @@ const DEFAULT_PUB: PublicState = {
   customRpcUrl: "",
   autoLockMinutes: 15,
   fiat: "USD",
-  addressBook: [],
   hideNfts: false,
 };
 
@@ -200,7 +199,13 @@ async function snapshot(): Promise<Snapshot> {
     getSession(),
     getPub(),
   ]);
-  return { hasVault: !!vault, locked: !session, pub, connectedSites: session?.secrets.connectedSites ?? {} };
+  return {
+    hasVault: !!vault,
+    locked: !session,
+    pub,
+    connectedSites: session?.secrets.connectedSites ?? {},
+    addressBook: session?.secrets.addressBook ?? [],
+  };
 }
 
 function resetAutoLock(minutes: number): void {
@@ -508,20 +513,23 @@ export async function handleMessage(
       }
 
       case "addAddress": {
-        const pub = await getPub();
+        const session = await requireSession();
         const address = msg.address.trim();
         const name = msg.name.trim() || `${address.slice(0, 4)}…${address.slice(-4)}`;
-        const existing = pub.addressBook.find((e) => e.address === address);
+        session.secrets.addressBook = session.secrets.addressBook || [];
+        const existing = session.secrets.addressBook.find((e) => e.address === address);
         if (existing) existing.name = name;
-        else pub.addressBook.push({ address, name });
-        await setPub(pub);
+        else session.secrets.addressBook.push({ address, name });
+        await saveSession(session.secrets, session.keyB64);
         return ok(await snapshot());
       }
 
       case "removeAddress": {
-        const pub = await getPub();
-        pub.addressBook = pub.addressBook.filter((e) => e.address !== msg.address);
-        await setPub(pub);
+        const session = await requireSession();
+        if (session.secrets.addressBook) {
+          session.secrets.addressBook = session.secrets.addressBook.filter((e) => e.address !== msg.address);
+          await saveSession(session.secrets, session.keyB64);
+        }
         return ok(await snapshot());
       }
 
