@@ -23,6 +23,7 @@ export function Activity({ snap }: { snap: Snapshot }) {
   const { toast, refresh } = useStore();
   const [saveContactAddress, setSaveContactAddress] = useState<string | null>(null);
   const [contactName, setContactName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedTx, setSelectedTx] = useState<ActivityItem | null>(null);
   const [showSpam, setShowSpam] = useState(false);
 
@@ -220,16 +221,24 @@ export function Activity({ snap }: { snap: Snapshot }) {
           />
           <Btn
             size="lg"
-            disabled={!contactName.trim()}
+            disabled={!contactName.trim() || isSaving}
+            loading={isSaving}
             onClick={async () => {
               if (!saveContactAddress) return;
-              await bg({ type: "addAddress", address: saveContactAddress, name: contactName.trim() });
-              await refresh();
-              toast("Contact saved", "success");
-              setSaveContactAddress(null);
+              setIsSaving(true);
+              try {
+                await bg({ type: "addAddress", address: saveContactAddress, name: contactName.trim() });
+                await refresh();
+                toast("Contact saved", "success");
+                setSaveContactAddress(null);
+              } catch (e) {
+                toast(e instanceof Error ? e.message : String(e), "error");
+              } finally {
+                setIsSaving(false);
+              }
             }}
           >
-            Save Contact
+            Save
           </Btn>
         </div>
       </Sheet>
