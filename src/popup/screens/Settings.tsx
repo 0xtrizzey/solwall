@@ -111,8 +111,8 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
           revealed per wallet from <strong>Wallets &amp; accounts</strong> — password required every time.
         </p>
         <Divider />
-        <div className="field">
-          <label>Maximum Privacy Mode (Paranoia)</label>
+        <div className="field" style={{ marginTop: "8px" }}>
+          <label>Paranoia Mode (Block NFTs)</label>
           <p className="sheet-text" style={{ margin: "4px 0 12px 0" }}>If enabled, NFTs will not be loaded under any circumstances to ensure 100% network isolation.</p>
           <div className="seg">
             <button
@@ -122,7 +122,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
                 await refresh();
               }}
             >
-              Decentralized (Default)
+              Off (Safe defaults)
             </button>
             <button
               className={snap.pub.hideNfts ? "on" : ""}
@@ -132,7 +132,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
                 toast("NFTs hidden", "success");
               }}
             >
-              Block NFTs
+              On (Block all)
             </button>
           </div>
         </div>
