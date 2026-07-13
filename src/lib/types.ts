@@ -124,6 +124,7 @@ export type BgRequest =
   | { type: "getApproval"; id: string }
   | { type: "resolveApproval"; id: string; approved: boolean; pubkey?: string }
   | { type: "resetWallet" }
+  | { type: "heartbeat" }
   // relayed from content script (dApp provider); origin is taken from the
   // verified message sender, never from the message body.
   | { type: "dapp"; method: DappMethod; params?: DappParams };
