@@ -30,7 +30,7 @@ Non-custodial Solana wallet as a Chrome (MV3) extension. Obsidian-dark UI with a
 
 ## Security model
 
-- Vault encrypted at rest with **AES-256-GCM**, key from **PBKDF2-SHA256 (600k iterations, OWASP 2024)**; stored in `chrome.storage.local`
+- Vault encrypted at rest with **AES-256-GCM**, key from **PBKDF2-SHA256 (1.2M iterations, OWASP 2026)**; stored in `chrome.storage.local`
 - Decrypted secrets live **only in `chrome.storage.session`** (memory-only, `TRUSTED_CONTEXTS` — unreachable from content scripts/pages, cleared on browser exit / lock / auto-lock). Only the **derived AES key** is kept there (never the plaintext password), so mutations re-encrypt without re-prompting and no password-reuse material is exposed
 - **Sender-trust boundary** (`background/index.ts`): privileged wallet ops are accepted only from first-party extension pages; dApp ops only from web content scripts; dApp origin is taken from the verified sender, never message content. A compromised content script cannot reach the vault
 - **Auto-lock** only resets on first-party activity — a connected dApp cannot poll to keep the wallet unlocked

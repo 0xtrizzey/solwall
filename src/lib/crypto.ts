@@ -1,4 +1,4 @@
-// Vault encryption: PBKDF2-SHA256 (600k iterations, OWASP 2024) -> AES-256-GCM.
+// Vault encryption: PBKDF2-SHA256 (1.2M iterations, OWASP 2026) -> AES-256-GCM.
 // WebCrypto only — available in both the popup and the MV3 service worker.
 //
 // After unlock we keep the *derived AES key* (not the password) in memory-only
@@ -7,7 +7,7 @@
 // reused across re-encryptions so the password path can always re-derive it; a
 // fresh IV per encryption keeps AES-GCM safe.
 
-const PBKDF2_ITERATIONS = 600_000;
+const PBKDF2_ITERATIONS = 1_200_000;
 
 export interface EncryptedVault {
   v: 1;

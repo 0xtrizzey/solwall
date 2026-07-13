@@ -107,7 +107,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
           </div>
         </div>
         <p className="sheet-text">
-          Your vault is encrypted with your password (AES-256-GCM, 600k-round PBKDF2). Recovery phrases and private keys can be
+          Your vault is encrypted with your password (AES-256-GCM, 1.2M-round PBKDF2). Recovery phrases and private keys can be
           revealed per wallet from <strong>Wallets &amp; accounts</strong> — password required every time.
         </p>
       </Sheet>
