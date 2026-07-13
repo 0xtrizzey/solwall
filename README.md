@@ -2,9 +2,27 @@
 
 Non-custodial Solana wallet as a Chrome (MV3) extension. Obsidian-dark UI with a solar-gold identity — deliberately not another purple wallet.
 
-## Install (unpacked)
+## Installation
 
-1. `npm install && npm run build` → produces `dist/`
+SOLWALL is a secure, Chrome-compatible extension (Manifest V3).
+
+### Option 1: Easy Install (No coding required)
+*This is the simplest method for everyday users on Windows and Mac.*
+
+1. **Download the Wallet:** Go to the **Releases** section on the right side of this GitHub page and download the `solwall.zip` file from the latest release.
+2. **Extract the Folder:** Once downloaded, extract (unzip) the file somewhere safe on your computer.
+   - **Windows:** Right-click the `.zip` file and select "Extract All...".
+   - **Mac:** Double-click the `.zip` file to extract it.
+3. **Open Chrome Extensions:** Open Google Chrome (or Brave/Edge) and type `chrome://extensions` in the address bar, then press Enter.
+4. **Enable Developer Mode:** Turn on the **"Developer mode"** switch in the top right corner of the Extensions page.
+5. **Load the Wallet:** Click the **"Load unpacked"** button in the top left. Select the extracted folder.
+6. **Pin it:** Click the puzzle piece icon 🧩 in Chrome's top right menu and pin SOLWALL for quick access.
+
+### Option 2: Build from Source (For developers)
+
+If you prefer to compile the wallet yourself directly from the source code:
+
+1. `npm install && npm run build` → produces the `dist/` folder.
 2. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `SOLWALL/dist`
 
 ## Features
