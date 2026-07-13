@@ -18,7 +18,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
     await refresh();
   };
 
-  const sites = Object.entries(snap.pub.connectedSites);
+  const sites = Object.entries(snap.connectedSites ?? {});
 
   return (
     <div className="settings">

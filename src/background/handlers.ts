@@ -58,7 +58,6 @@ const DEFAULT_PUB: PublicState = {
   network: "mainnet-beta",
   customRpcUrl: "",
   autoLockMinutes: 15,
-  connectedSites: {},
   fiat: "USD",
   addressBook: [],
   hideNfts: false,
@@ -201,7 +200,7 @@ async function snapshot(): Promise<Snapshot> {
     getSession(),
     getPub(),
   ]);
-  return { hasVault: !!vault, locked: !session, pub };
+  return { hasVault: !!vault, locked: !session, pub, connectedSites: session?.secrets.connectedSites ?? {} };
 }
 
 function resetAutoLock(minutes: number): void {
@@ -454,9 +453,11 @@ export async function handleMessage(
           const first = pub.wallets[0];
           pub.active = { walletId: first.id, pubkey: first.accounts[0].pubkey };
         }
-        for (const [origin, site] of Object.entries(pub.connectedSites)) {
-          if (removed?.accounts.some((a) => a.pubkey === site.pubkey)) delete pub.connectedSites[origin];
+        const connectedSites = session.secrets.connectedSites ?? {};
+        for (const [origin, site] of Object.entries(connectedSites)) {
+          if (removed?.accounts.some((a) => a.pubkey === site.pubkey)) delete connectedSites[origin];
         }
+        session.secrets.connectedSites = connectedSites;
         await saveSession(session.secrets, session.keyB64);
         await setPub(pub);
         return ok(await snapshot());
@@ -568,9 +569,11 @@ export async function handleMessage(
       }
 
       case "revokeSite": {
-        const pub = await getPub();
-        delete pub.connectedSites[msg.origin];
-        await setPub(pub);
+        const session = await requireSession();
+        if (session.secrets.connectedSites) {
+          delete session.secrets.connectedSites[msg.origin];
+          await saveSession(session.secrets, session.keyB64);
+        }
         broadcastEvent({ event: "disconnect", data: { origin: msg.origin } });
         return ok(await snapshot());
       }
@@ -628,54 +631,36 @@ async function verifyPassword(password: string): Promise<void> {
 
 async function handleDapp(origin: string, method: DappMethod, params: DappParams): Promise<BgResponse> {
   const pub = await getPub();
-  const site = pub.connectedSites[origin];
+  const session = await getSession();
+  const site = session?.secrets.connectedSites?.[origin];
 
   switch (method) {
     case "getNetwork":
       return ok({ network: pub.network });
 
     case "connectIfTrusted": {
-      const session = await getSession();
       if (site && session) return ok({ publicKey: site.pubkey });
       return { ok: false, error: "Not trusted" };
     }
 
     case "connect": {
-      const session = await getSession();
       if (site && session) return ok({ publicKey: site.pubkey });
       const result = await awaitApproval(origin, { kind: "connect" });
       return result;
     }
 
     case "disconnect": {
-      delete pub.connectedSites[origin];
-      await setPub(pub);
+      const session = await getSession();
+      if (session?.secrets.connectedSites) {
+        delete session.secrets.connectedSites[origin];
+        await saveSession(session.secrets, session.keyB64);
+      }
       return ok({});
     }
 
     case "signMessage": {
       if (!site) return { ok: false, error: "Not connected — call connect() first" };
       if (!params.messageB64) return { ok: false, error: "Missing message" };
-      
-      try {
-        const bytes = bytesFromB64(params.messageB64);
-        let isTx = false;
-        try {
-          VersionedTransaction.deserialize(bytes);
-          isTx = true;
-        } catch {
-          try {
-            Transaction.from(bytes);
-            isTx = true;
-          } catch {}
-        }
-        if (isTx) {
-          return { ok: false, error: "Security Error: Cannot sign a transaction via signMessage. Use signTransaction instead." };
-        }
-      } catch (e) {
-        return { ok: false, error: "Invalid message format" };
-      }
-
       return awaitApproval(origin, { kind: "signMessage", messageB64: params.messageB64 });
     }
 
@@ -721,18 +706,35 @@ async function resolveApproval(id: string, approved: boolean, chosenPubkey?: str
       const exists = pub.wallets.some((w) => w.accounts.some((a) => a.pubkey === pubkey));
       if (!exists) throw new Error("Account not found");
 
-      pub.connectedSites[request.origin] = { pubkey, connectedAt: Date.now() };
-      await setPub(pub);
+      const connectedSites = session.secrets.connectedSites ?? {};
+      connectedSites[request.origin] = { pubkey, connectedAt: Date.now() };
+      session.secrets.connectedSites = connectedSites;
+      await saveSession(session.secrets, session.keyB64);
       resolve({ ok: true, data: { publicKey: pubkey } });
       return ok({ done: true });
     }
 
-    const site = pub.connectedSites[request.origin];
+    const site = session.secrets.connectedSites?.[request.origin];
     if (!site) throw new Error("Site is no longer connected");
     const kp = keypairFor(session.secrets, pub, site.pubkey);
 
     if (request.payload.kind === "signMessage") {
-      const sig = nacl.sign.detached(bytesFromB64(request.payload.messageB64), kp.secretKey);
+      const rawBytes = bytesFromB64(request.payload.messageB64);
+      
+      // SIP-8 Off-Chain Message Standard Envelope
+      const prefix = new TextEncoder().encode("solana offchain");
+      const envelope = new Uint8Array(1 + prefix.length + 2 + 2 + rawBytes.length);
+      envelope[0] = 255; // \xff
+      envelope.set(prefix, 1);
+      // Format 0 (2 bytes, little endian)
+      envelope[1 + prefix.length] = 0;
+      envelope[1 + prefix.length + 1] = 0;
+      // Length of message (2 bytes, little endian)
+      envelope[1 + prefix.length + 2] = rawBytes.length & 0xff;
+      envelope[1 + prefix.length + 3] = (rawBytes.length >> 8) & 0xff;
+      envelope.set(rawBytes, 1 + prefix.length + 4);
+
+      const sig = nacl.sign.detached(envelope, kp.secretKey);
       resolve({ ok: true, data: { signatureB58: bs58.encode(sig), publicKey: site.pubkey } });
       return ok({ done: true });
     }

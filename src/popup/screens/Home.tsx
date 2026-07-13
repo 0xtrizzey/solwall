@@ -101,7 +101,14 @@ function TokenList({
         <button key={r.mint} className="token-row" onClick={() => nav(`/send?mint=${r.isNative ? "sol" : r.mint}`)}>
           <TokenAvatar symbol={r.symbol} logoURI={r.isNative ? SOL_LOGO : r.logoURI} />
           <div className="token-mid">
-            <div className="token-name">{r.isNative ? "Solana" : r.name}</div>
+            <div className="token-name" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {r.isNative ? "Solana" : r.name}
+              {r.holding?.unverified && (
+                <span className="unverified-badge" title={`Unverified token. Mint: ${r.mint}`}>
+                  Unverified
+                </span>
+              )}
+            </div>
             <div className="token-amount mono">
               {formatAmount(r.amount, 5)} {r.symbol}
             </div>

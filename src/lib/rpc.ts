@@ -37,6 +37,7 @@ export interface TokenHolding {
   tokenProgram: string;
   ata: string;
   isNft: boolean;
+  unverified?: boolean;
 }
 
 export async function fetchSolBalance(conn: Connection, owner: string): Promise<number> {
@@ -74,6 +75,7 @@ export async function fetchTokenHoldings(conn: Connection, owner: string): Promi
       tokenProgram: acc.program.toBase58(),
       ata: acc.pubkey.toBase58(),
       isNft: amt.decimals === 0 && amt.amount === "1",
+      unverified: !known,
     });
   }
 
@@ -102,6 +104,7 @@ export interface ActivityItem {
   label: string;
   delta: string; // signed display amount, e.g. "-0.5 SOL"
   counterparty?: string;
+  unverified?: boolean;
 }
 
 export async function fetchActivity(conn: Connection, owner: string, limit = 15): Promise<ActivityItem[]> {
@@ -160,6 +163,7 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
         kind: diff > 0 ? "received" : "sent",
         label: diff > 0 ? `Received ${sym}` : `Sent ${sym}`,
         delta: `${sign}${Math.abs(diff).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${sym}`,
+        unverified: !known,
       };
     }
   }

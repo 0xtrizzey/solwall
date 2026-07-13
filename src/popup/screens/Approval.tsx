@@ -29,7 +29,7 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
   useEffect(() => {
     if (state.status !== "ready" || state.request.payload.kind !== "signTransaction") return;
     const req = state.request;
-    const owner = snap.pub.connectedSites[req.origin]?.pubkey ?? snap.pub.active?.pubkey;
+    const owner = snap.connectedSites?.[req.origin]?.pubkey ?? snap.pub.active?.pubkey;
     if (owner == null || req.payload.kind !== "signTransaction") return;
     setAnalysis("loading");
     const conn = makeConnection(snap.pub.network, snap.pub.customRpcUrl);
@@ -137,8 +137,8 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
               <div className="kv">
                 <span>Account</span>
                 <span className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Identicon address={snap.pub.connectedSites[request.origin]?.pubkey ?? ""} size={14} />
-                  {truncateAddress(snap.pub.connectedSites[request.origin]?.pubkey ?? "?", 6)}
+                  <Identicon address={snap.connectedSites?.[request.origin]?.pubkey ?? ""} size={14} />
+                  {truncateAddress(snap.connectedSites?.[request.origin]?.pubkey ?? "?", 6)}
                 </span>
               </div>
             </div>

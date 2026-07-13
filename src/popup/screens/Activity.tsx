@@ -71,9 +71,10 @@ export function Activity({ snap }: { snap: Snapshot }) {
                 {item.kind === "sent" ? <IconSend size={16} /> : item.kind === "received" ? <IconReceive size={16} /> : <IconLink size={16} />}
               </div>
               <div className="row-mid">
-                <div className="row-title">
+                <div className="row-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   {item.err ? "Failed — " : ""}
                   {item.label}
+                  {item.unverified && <span className="unverified-badge" title="Unverified token">Unverified</span>}
                 </div>
                 <div className="row-sub">{formatTime(item.time)}</div>
               </div>

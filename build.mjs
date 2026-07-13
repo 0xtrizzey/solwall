@@ -37,7 +37,6 @@ await build({
   entryPoints: {
     popup: path.join(root, "src/popup/main.tsx"),
     background: path.join(root, "src/background/index.ts"),
-    dev: path.join(root, "src/dev/main.tsx"),
   },
   inject: [path.join(root, "src/lib/buffer-shim.js")],
 });
@@ -52,4 +51,5 @@ await build({
 });
 
 cpSync(path.join(root, "public"), dist, { recursive: true });
+rmSync(path.join(dist, "dev.html"), { force: true });
 console.log("\nSOLWALL built -> dist/ (load as unpacked extension)");

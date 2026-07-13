@@ -142,8 +142,13 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
             {token ? (
               <>
                 <TokenAvatar symbol={token.symbol} logoURI={token.logoURI} size={28} />
-                <span className="token-select-sym">{token.symbol}</span>
-                <span className="token-select-bal mono">{formatAmount(token.amount, 5)} available</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                  <span className="token-select-sym" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {token.symbol}
+                    {token.holding?.unverified && <span className="unverified-badge" title={`Unverified token. Mint: ${token.mint}`}>Unverified</span>}
+                  </span>
+                  <span className="token-select-bal mono">{formatAmount(token.amount, 5)} available</span>
+                </div>
               </>
             ) : (
               <span>Select token</span>
@@ -214,7 +219,14 @@ export function Send({ snap, nav, query }: { snap: Snapshot; nav: (r: string) =>
             >
               <TokenAvatar symbol={r.symbol} logoURI={r.logoURI} />
               <div className="token-mid">
-                <div className="token-name">{r.name}</div>
+                <div className="token-name" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {r.name}
+                  {r.holding?.unverified && (
+                    <span className="unverified-badge" title={`Unverified token. Mint: ${r.mint}`}>
+                      Unverified
+                    </span>
+                  )}
+                </div>
                 <div className="token-amount mono">
                   {formatAmount(r.amount, 5)} {r.symbol}
                 </div>

@@ -74,9 +74,10 @@ function decode(bytes: Uint8Array, owner: string): { lines: TxLine[]; programs: 
     programSet.add(KNOWN_PROGRAMS[ix.programId] ?? truncateAddress(ix.programId));
     const d = ix.data;
 
-    if (ix.programId === SYSTEM_PROGRAM && d.length >= 12) {
+    if (ix.programId === SYSTEM_PROGRAM && d.length >= 4) {
       const dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
-      if (dv.getUint32(0, true) === 2) {
+      const instructionType = dv.getUint32(0, true);
+      if (instructionType === 2 && d.length >= 12) {
         // Transfer
         const lamports = Number(dv.getBigUint64(4, true));
         const to = ix.keys[1];
@@ -85,6 +86,9 @@ function decode(bytes: Uint8Array, owner: string): { lines: TxLine[]; programs: 
           label: `${outgoing ? "Send" : "Transfer"} ${formatAmount(lamports / LAMPORTS, 6)} SOL${to ? ` ${outgoing ? "to" : "via"} ${truncateAddress(to)}` : ""}`,
           tone: outgoing ? "warn" : "neutral",
         });
+      } else if (instructionType === 4) {
+        // AdvanceNonceAccount
+        lines.push({ label: "Delayed/Durable Nonce Transaction", tone: "danger" });
       }
     } else if (ix.programId === TOKEN || ix.programId === TOKEN22) {
       const t = d[0];
