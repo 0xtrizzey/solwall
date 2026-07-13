@@ -132,10 +132,14 @@ export async function fetchActivity(conn: Connection, owner: string, limit = 15)
       delta: "",
     };
     const tx = parsed[i];
-    if (!tx?.meta) return base;
+    if (!tx || !tx.meta) {
+      base.label = "Archived Transaction";
+      return base;
+    }
     try {
       return classify(tx, owner, base);
-    } catch {
+    } catch (e) {
+      console.warn("Classification failed:", e);
       return base;
     }
   });
@@ -213,7 +217,20 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
           let cDiff = (meta.postBalances[i] - meta.preBalances[i]) / 1e9;
           if (i === 0) cDiff += (meta.fee ?? 0) / 1e9;
           if ((diff < 0 && cDiff > 0) || (diff > 0 && cDiff < 0)) {
-            counterparty = keys[i]?.pubkey.toBase58();
+            let address = keys[i]?.pubkey?.toBase58();
+            if (!address && meta.loadedAddresses) {
+                const writable = meta.loadedAddresses.writable ?? [];
+                const readonly = meta.loadedAddresses.readonly ?? [];
+                const altIndex = i - keys.length;
+                if (altIndex >= 0) {
+                    if (altIndex < writable.length) {
+                        address = writable[altIndex].toBase58();
+                    } else {
+                        address = readonly[altIndex - writable.length].toBase58();
+                    }
+                }
+            }
+            counterparty = address;
             if (counterparty) break;
           }
         }
