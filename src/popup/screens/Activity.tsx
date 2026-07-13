@@ -4,7 +4,7 @@ import { explorerTxUrl, fetchActivity, makeConnection, type ActivityItem } from 
 import type { Snapshot } from "../../lib/types";
 import { friendlyRpcError } from "../../lib/errors";
 import { EmptyState, ErrorState, SkeletonRows, Sheet, Field, Btn } from "../components";
-import { IconActivity, IconExternal, IconLink, IconReceive, IconSend, IconPlus } from "../icons";
+import { IconActivity, IconExternal, IconLink, IconReceive, IconSend, IconPlus, IconCopy } from "../icons";
 import { bg } from "../bg";
 import { useStore } from "../store";
 
@@ -23,6 +23,7 @@ export function Activity({ snap }: { snap: Snapshot }) {
   const { toast, refresh } = useStore();
   const [saveContactAddress, setSaveContactAddress] = useState<string | null>(null);
   const [contactName, setContactName] = useState("");
+  const [selectedTx, setSelectedTx] = useState<ActivityItem | null>(null);
 
   const load = useCallback(async () => {
     setState((s) => (s.status === "ready" ? s : { status: "loading" }));
@@ -65,61 +66,121 @@ export function Activity({ snap }: { snap: Snapshot }) {
       {groups.map((g) => (
         <div key={g.label} className="activity-group">
           <div className="group-label">{g.label}</div>
-          {g.items.map((item) => (
-            <a
-              key={item.signature}
-              className="activity-row"
-              href={explorerTxUrl(item.signature, snap.pub.network)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <div className={`act-icon act-${item.err ? "err" : item.kind}`}>
-                {item.kind === "sent" ? <IconSend size={16} /> : item.kind === "received" ? <IconReceive size={16} /> : <IconLink size={16} />}
-              </div>
-              <div className="row-mid">
-                <div className="row-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  {item.err ? "Failed — " : ""}
-                  {item.label}
-                  {item.unverified && <span className="unverified-badge" title="Unverified token">Unverified</span>}
+          {g.items.map((item) => {
+            const saved = item.counterparty ? (snap.addressBook ?? []).find((e) => e.address === item.counterparty) : null;
+            const counterpartyDisplay = saved ? saved.name : (item.counterparty ? truncateAddress(item.counterparty, 4) : "Unknown");
+            
+            return (
+              <button
+                key={item.signature}
+                className="tx-card"
+                onClick={() => setSelectedTx(item)}
+              >
+                <div className="tx-icon-wrap">
+                  <div className={`tx-icon-inner bg-${item.kind}`}>
+                    <div className="tx-icon-base" />
+                  </div>
+                  <div className={`tx-badge tx-badge-${item.kind}`}>
+                    {item.kind === "sent" ? <IconSend size={10} /> : item.kind === "received" ? <IconReceive size={10} /> : <IconLink size={10} />}
+                  </div>
                 </div>
-                <div className="row-sub" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  {formatTime(item.time)}
-                  {item.counterparty && (
-                    <>
-                      <span>•</span>
-                      {(() => {
-                        const saved = (snap.addressBook ?? []).find((e) => e.address === item.counterparty);
-                        if (saved) return <span className="mono">{saved.name}</span>;
-                        return (
-                          <span className="mono" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            {truncateAddress(item.counterparty, 4)}
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setContactName("");
-                                setSaveContactAddress(item.counterparty!);
-                              }}
-                              title="Save contact"
-                              style={{ width: 14, height: 14, background: "rgba(255,255,255,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}
-                            >
-                              <IconPlus size={10} />
-                            </button>
-                          </span>
-                        );
-                      })()}
-                    </>
-                  )}
+                <div className="tx-content">
+                  <div className="tx-title">{item.err ? "Failed — " : ""}{item.label}</div>
+                  <div className="tx-subtitle">
+                    {item.kind === "sent" ? `To ${counterpartyDisplay}` : item.kind === "received" ? `From ${counterpartyDisplay}` : counterpartyDisplay}
+                  </div>
                 </div>
-              </div>
-              <div className={`act-delta mono ${item.delta.startsWith("+") ? "text-success" : ""}`}>{item.delta}</div>
-              <IconExternal size={13} className="act-ext" />
-            </a>
-          ))}
+                <div className={`tx-amount ${item.delta.startsWith("+") ? "text-success" : ""}`}>{item.delta}</div>
+              </button>
+            );
+          })}
         </div>
       ))}
       
+      <Sheet open={selectedTx !== null} onClose={() => setSelectedTx(null)} title="">
+        {selectedTx && (() => {
+            const saved = selectedTx.counterparty ? (snap.addressBook ?? []).find((e) => e.address === selectedTx.counterparty) : null;
+            const cpDisplay = saved ? saved.name : (selectedTx.counterparty ? truncateAddress(selectedTx.counterparty, 4) : "Unknown");
+            
+            return (
+              <div className="tx-details">
+                <div className="tx-details-header">
+                  <div className="tx-icon-wrap huge">
+                    <div className={`tx-icon-inner bg-${selectedTx.kind}`}>
+                      <div className="tx-icon-base" style={{ width: 32, height: 32 }} />
+                    </div>
+                    <div className={`tx-badge tx-badge-${selectedTx.kind}`}>
+                      {selectedTx.kind === "sent" ? <IconSend size={14} /> : selectedTx.kind === "received" ? <IconReceive size={14} /> : <IconLink size={14} />}
+                    </div>
+                  </div>
+                  <div className={`tx-details-amount ${selectedTx.delta.startsWith("+") ? "text-success" : ""}`}>
+                    {selectedTx.delta || "0.00 SOL"}
+                  </div>
+                </div>
+                
+                <div className="tx-details-table">
+                  <div className="tx-dt-row">
+                    <span className="tx-dt-label">Date</span>
+                    <span className="tx-dt-val">
+                      {selectedTx.time 
+                        ? new Date(selectedTx.time * 1000).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true }) 
+                        : "Unknown"}
+                    </span>
+                  </div>
+                  <div className="tx-dt-row">
+                    <span className="tx-dt-label">Status</span>
+                    <span className={`tx-dt-val ${selectedTx.err ? "text-danger" : "text-success"}`}>
+                      {selectedTx.err ? "Failed" : "Success"}
+                    </span>
+                  </div>
+                  {selectedTx.counterparty && (
+                    <div className="tx-dt-row">
+                      <span className="tx-dt-label">{selectedTx.kind === "sent" ? "To" : "From"}</span>
+                      <div className="tx-dt-val copyable-val">
+                        <button 
+                          className="copy-btn" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedTx.counterparty!);
+                            toast("Copied", "success");
+                          }}
+                        >
+                          {cpDisplay} <IconCopy size={12} style={{marginLeft: 4, color: "var(--muted)"}} />
+                        </button>
+                        {!saved && (
+                           <button className="icon-btn save-btn" onClick={() => {
+                              setSelectedTx(null);
+                              setContactName("");
+                              setSaveContactAddress(selectedTx.counterparty!);
+                           }} title="Save Contact">
+                              <IconPlus size={12} />
+                           </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="tx-dt-row">
+                    <span className="tx-dt-label">Network</span>
+                    <span className="tx-dt-val">Solana</span>
+                  </div>
+                  {selectedTx.fee !== undefined && (
+                    <div className="tx-dt-row">
+                      <span className="tx-dt-label">Network Fee</span>
+                      <span className="tx-dt-val">-{selectedTx.fee.toLocaleString("en-US", { maximumFractionDigits: 6 })} SOL</span>
+                    </div>
+                  )}
+                  <a href={explorerTxUrl(selectedTx.signature, snap.pub.network)} target="_blank" rel="noreferrer" className="tx-dt-link">
+                    View on Solscan <IconExternal size={14} style={{marginLeft: 4}} />
+                  </a>
+                </div>
+                
+                <Btn size="lg" variant="outline" onClick={() => setSelectedTx(null)} style={{ marginTop: 24 }}>
+                  Close
+                </Btn>
+              </div>
+            );
+        })()}
+      </Sheet>
+
       <Sheet open={saveContactAddress !== null} onClose={() => setSaveContactAddress(null)} title="Save Recipient">
         <div className="save-contact-form" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Field label="Address" className="mono-input" value={saveContactAddress || ""} readOnly />

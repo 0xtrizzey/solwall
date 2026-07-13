@@ -105,6 +105,7 @@ export interface ActivityItem {
   delta: string; // signed display amount, e.g. "-0.5 SOL"
   counterparty?: string;
   unverified?: boolean;
+  fee?: number;
 }
 
 export async function fetchActivity(conn: Connection, owner: string, limit = 15): Promise<ActivityItem[]> {
@@ -138,12 +139,14 @@ export async function fetchActivity(conn: Connection, owner: string, limit = 15)
       kind: "unknown",
       label: "Transaction",
       delta: "",
+      fee: 0,
     };
     const tx = parsed[i];
     if (!tx || !tx.meta) {
       base.label = "Archived Transaction";
       return base;
     }
+    base.fee = (tx.meta.fee ?? 0) / 1e9;
     try {
       return classify(tx, owner, base);
     } catch (e) {
@@ -193,7 +196,7 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
       return {
         ...base,
         kind: diff > 0 ? "received" : "sent",
-        label: diff > 0 ? `Received ${sym}` : `Sent ${sym}`,
+        label: diff > 0 ? `Received` : `Sent`,
         delta: `${sign}${Math.abs(diff).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${sym}`,
         unverified: !known,
         counterparty,
@@ -207,7 +210,7 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
     if (idx === 0) diff += (meta.fee ?? 0) / 1e9; // ignore pure fee spend for classification
     if (Math.abs(diff) > 1e-9) {
       const sign = diff > 0 ? "+" : "−";
-      const label = diff > 0 ? "Received SOL" : "Sent SOL";
+      const label = diff > 0 ? "Received" : "Sent";
       
       let counterparty: string | undefined;
       for (const ix of tx.transaction.message.instructions) {
