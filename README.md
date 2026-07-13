@@ -68,3 +68,10 @@ build.mjs         esbuild → dist/ (popup, background, content, inpage, dev)
 - `signTransaction` (return-signed-without-sending) patches signatures back onto the dApp's transaction object; `signAndSendTransaction` is the most robust path. Both legacy and v0 versioned transactions are supported and signature-verified.
 - Transaction simulation covers pass/fail + the signer's SOL delta + common danger flags; it does not yet diff every SPL-token balance change
 - No staking UI, hardware-wallet, or Ledger support
+
+## Donations ❤️
+
+If you find this project useful and want to support its development, you can send tips to the following addresses:
+
+- **SOLANA:** `gAJ9YBNnNrevtKDi2aFw2WiPWR93KhftCvJWV2Q8qEQ`
+- **MONERO:** `88YUhLmDGqgJbFBHVaSsywVZ6B5HBHUKuhx2tvx8iQWyLJ3EgtRXkxCjVV8M5t64akf6HAGUzhuCGBgtBqDjQwMjM4FFPon`
