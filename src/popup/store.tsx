@@ -83,7 +83,7 @@ export function useCopy() {
         if (timer.current) window.clearTimeout(timer.current);
         timer.current = window.setTimeout(() => {
           navigator.clipboard.writeText("").catch(() => {});
-        }, 45000);
+        }, 25000);
       } catch {
         toast("Copy failed", "error");
       }
