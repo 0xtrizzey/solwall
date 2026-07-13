@@ -113,7 +113,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
         <Divider />
         <div className="field">
           <label>Maximum Privacy Mode (Paranoia)</label>
-          <p className="sheet-text" style={{ margin: "4px 0 12px 0" }}>If enabled, NFTs will not be loaded to prevent third-party servers from seeing your IP address.</p>
+          <p className="sheet-text" style={{ margin: "4px 0 12px 0" }}>If enabled, NFTs will not be loaded under any circumstances to ensure 100% network isolation.</p>
           <div className="chip-row">
             <button
               className={`chip ${!snap.pub.hideNfts ? "chip-right" : ""}`}
@@ -122,7 +122,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
                 await refresh();
               }}
             >
-              Cloudflare Proxy (Default)
+              Decentralized (Default)
             </button>
             <button
               className={`chip ${snap.pub.hideNfts ? "chip-right" : ""}`}

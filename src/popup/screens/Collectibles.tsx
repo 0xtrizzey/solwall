@@ -127,9 +127,10 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
           {c.image ? (
             <img src={c.image} alt={c.name} loading="lazy" referrerPolicy="no-referrer" />
           ) : c.pendingHttpImageUri || c.pendingHttpMetaUri ? (
-            <div className="nft-fallback blocked-http" style={{ flexDirection: "column", gap: "8px", padding: "12px", textAlign: "center" }}>
-              <IconWarning size={20} />
-              <Btn size="sm" variant="outline" onClick={() => loadHttp(c.mint)}>Load<br/>(IP Warning)</Btn>
+            <div className="nft-fallback blocked-http" style={{ flexDirection: "column", gap: "6px", padding: "8px", textAlign: "center" }}>
+              <IconWarning size={18} color="var(--red)" />
+              <div style={{ fontSize: "10px", lineHeight: 1.2, color: "var(--red)" }}>HTTP Server may log your IP</div>
+              <Btn size="sm" variant="outline" onClick={() => loadHttp(c.mint)}>Reveal</Btn>
             </div>
           ) : (
             <div className="nft-fallback">
