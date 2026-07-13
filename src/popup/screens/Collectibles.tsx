@@ -33,7 +33,7 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
             const meta = await fetchOnchainMeta(conn, nft.mint);
             if (meta?.name) card.name = meta.name;
             if (meta?.uri && /^https?:/.test(meta.uri)) {
-              const json = await fetch(meta.uri, { signal: AbortSignal.timeout(5000) }).then((r) => r.json());
+              const json = await fetch(meta.uri, { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
               if (typeof json?.image === "string" && /^https?:/.test(json.image)) card.image = json.image;
               if (typeof json?.name === "string" && json.name) card.name = json.name;
             }
@@ -70,7 +70,7 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
       {(cards ?? []).map((c) => (
         <div key={c.mint} className="nft-card">
           {c.image ? (
-            <img src={c.image} alt={c.name} loading="lazy" />
+            <img src={c.image} alt={c.name} loading="lazy" referrerPolicy="no-referrer" />
           ) : (
             <div className="nft-fallback">
               <IconGem size={24} />
