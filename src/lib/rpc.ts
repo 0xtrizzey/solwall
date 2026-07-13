@@ -106,6 +106,7 @@ export interface ActivityItem {
   counterparty?: string;
   unverified?: boolean;
   fee?: number;
+  isSpam?: boolean;
 }
 
 export async function fetchActivity(conn: Connection, owner: string, limit = 15): Promise<ActivityItem[]> {
@@ -255,12 +256,15 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
         }
       }
 
+      const isSpam = diff > 0 && Math.abs(diff) < 0.005;
+
       return {
         ...base,
         kind: diff > 0 ? "received" : "sent",
         label,
         delta: `${sign}${Math.abs(diff).toLocaleString("en-US", { maximumFractionDigits: 6 })} SOL`,
         counterparty,
+        isSpam,
       };
     }
   }

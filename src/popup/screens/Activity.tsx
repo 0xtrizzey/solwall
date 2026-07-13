@@ -24,6 +24,7 @@ export function Activity({ snap }: { snap: Snapshot }) {
   const [saveContactAddress, setSaveContactAddress] = useState<string | null>(null);
   const [contactName, setContactName] = useState("");
   const [selectedTx, setSelectedTx] = useState<ActivityItem | null>(null);
+  const [showSpam, setShowSpam] = useState(false);
 
   const load = useCallback(async () => {
     setState((s) => (s.status === "ready" ? s : { status: "loading" }));
@@ -53,8 +54,24 @@ export function Activity({ snap }: { snap: Snapshot }) {
     );
   }
 
+  const filteredItems = state.items.filter((item) => {
+    if (!item.isSpam) return true;
+    const isSaved = item.counterparty && (snap.addressBook ?? []).some((e) => e.address.trim().toLowerCase() === item.counterparty!.trim().toLowerCase());
+    return isSaved || showSpam;
+  });
+  
+  if (filteredItems.length === 0 && state.items.length > 0) {
+    return (
+      <EmptyState
+        icon={<IconActivity size={22} />}
+        title="No recent activity"
+        body="Only hidden spam transactions were found."
+      />
+    );
+  }
+
   const groups: { label: string; items: ActivityItem[] }[] = [];
-  for (const item of state.items) {
+  for (const item of filteredItems) {
     const label = dayLabel(item.time);
     const last = groups[groups.length - 1];
     if (last?.label === label) last.items.push(item);
@@ -96,6 +113,16 @@ export function Activity({ snap }: { snap: Snapshot }) {
           })}
         </div>
       ))}
+      
+      {state.items.length > filteredItems.length && !showSpam && (
+        <button 
+          className="chip" 
+          style={{ margin: "16px auto", display: "block" }} 
+          onClick={() => setShowSpam(true)}
+        >
+          Show {state.items.length - filteredItems.length} hidden spam transactions
+        </button>
+      )}
       
       <Sheet open={selectedTx !== null} onClose={() => setSelectedTx(null)} title="">
         {selectedTx && (() => {
