@@ -106,10 +106,36 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
             ))}
           </div>
         </div>
-        <p className="sheet-text">
+        <p className="sheet-text" style={{ marginTop: "1rem" }}>
           Your vault is encrypted with your password (AES-256-GCM, 1.2M-round PBKDF2). Recovery phrases and private keys can be
           revealed per wallet from <strong>Wallets &amp; accounts</strong> — password required every time.
         </p>
+        <Divider />
+        <div className="field">
+          <label>Maximum Privacy Mode (Paranoia)</label>
+          <p className="sheet-text" style={{ margin: "4px 0 12px 0" }}>If enabled, NFTs will not be loaded to prevent third-party servers from seeing your IP address.</p>
+          <div className="chip-row">
+            <button
+              className={`chip ${!snap.pub.hideNfts ? "chip-right" : ""}`}
+              onClick={async () => {
+                await bg({ type: "setHideNfts", hidden: false });
+                await refresh();
+              }}
+            >
+              Cloudflare Proxy (Default)
+            </button>
+            <button
+              className={`chip ${snap.pub.hideNfts ? "chip-right" : ""}`}
+              onClick={async () => {
+                await bg({ type: "setHideNfts", hidden: true });
+                await refresh();
+                toast("NFTs hidden", "success");
+              }}
+            >
+              Block NFTs
+            </button>
+          </div>
+        </div>
       </Sheet>
 
       {/* connected sites */}

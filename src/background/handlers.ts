@@ -61,6 +61,7 @@ const DEFAULT_PUB: PublicState = {
   connectedSites: {},
   fiat: "USD",
   addressBook: [],
+  hideNfts: false,
 };
 
 function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -518,6 +519,13 @@ export async function handleMessage(
       case "removeAddress": {
         const pub = await getPub();
         pub.addressBook = pub.addressBook.filter((e) => e.address !== msg.address);
+        await setPub(pub);
+        return ok(await snapshot());
+      }
+
+      case "setHideNfts": {
+        const pub = await getPub();
+        pub.hideNfts = msg.hidden;
         await setPub(pub);
         return ok(await snapshot());
       }

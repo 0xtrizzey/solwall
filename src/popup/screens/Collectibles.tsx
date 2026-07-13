@@ -23,6 +23,8 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
     if (portfolio.status !== "ready") return;
     let cancelled = false;
     (async () => {
+      if (snap.pub.hideNfts) return;
+
       const conn = makeConnection(snap.pub.network, snap.pub.customRpcUrl);
       const results = await Promise.all(
         portfolio.nfts.slice(0, 24).map(async (nft): Promise<NftCard> => {
@@ -33,8 +35,12 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
             const meta = await fetchOnchainMeta(conn, nft.mint);
             if (meta?.name) card.name = meta.name;
             if (meta?.uri && /^https?:/.test(meta.uri)) {
-              const json = await fetch(meta.uri, { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
-              if (typeof json?.image === "string" && /^https?:/.test(json.image)) card.image = json.image;
+              const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(meta.uri)}`;
+              const json = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
+              if (typeof json?.image === "string" && /^https?:/.test(json.image)) {
+                // Route image through Cloudflare CDN proxy
+                card.image = `https://wsrv.nl/?url=${encodeURIComponent(json.image)}`;
+              }
               if (typeof json?.name === "string" && json.name) card.name = json.name;
             }
           } catch {
@@ -50,6 +56,16 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
       cancelled = true;
     };
   }, [portfolio.status, portfolio.nfts, snap.pub.network, snap.pub.customRpcUrl]);
+
+  if (snap.pub.hideNfts) {
+    return (
+      <EmptyState
+        icon={<IconGem size={22} />}
+        title="Privacy Mode Active"
+        body="NFT fetching is blocked to protect your IP address."
+      />
+    );
+  }
 
   if (portfolio.status === "loading" || (portfolio.status === "ready" && portfolio.nfts.length > 0 && cards == null)) {
     return <div className="pad-screen"><SkeletonRows count={3} /></div>;

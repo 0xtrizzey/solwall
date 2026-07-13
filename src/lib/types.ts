@@ -72,6 +72,7 @@ export interface PublicState {
   /** ISO 4217 code for value display, e.g. "USD", "EUR". */
   fiat: string;
   addressBook: AddressBookEntry[];
+  hideNfts: boolean;
 }
 
 export interface Snapshot {
@@ -111,6 +112,7 @@ export type BgRequest =
   | { type: "setNetwork"; network: NetworkId; customRpcUrl?: string }
   | { type: "setAutoLock"; minutes: number }
   | { type: "setFiat"; fiat: string }
+  | { type: "setHideNfts"; hidden: boolean }
   | { type: "changePassword"; oldPassword: string; newPassword: string }
   | { type: "addAddress"; address: string; name: string }
   | { type: "removeAddress"; address: string }
