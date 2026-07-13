@@ -114,9 +114,9 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
         <div className="field">
           <label>Maximum Privacy Mode (Paranoia)</label>
           <p className="sheet-text" style={{ margin: "4px 0 12px 0" }}>If enabled, NFTs will not be loaded under any circumstances to ensure 100% network isolation.</p>
-          <div className="chip-row">
+          <div className="seg">
             <button
-              className={`chip ${!snap.pub.hideNfts ? "chip-right" : ""}`}
+              className={!snap.pub.hideNfts ? "on" : ""}
               onClick={async () => {
                 await bg({ type: "setHideNfts", hidden: false });
                 await refresh();
@@ -125,7 +125,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
               Decentralized (Default)
             </button>
             <button
-              className={`chip ${snap.pub.hideNfts ? "chip-right" : ""}`}
+              className={snap.pub.hideNfts ? "on" : ""}
               onClick={async () => {
                 await bg({ type: "setHideNfts", hidden: true });
                 await refresh();
