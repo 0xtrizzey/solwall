@@ -118,8 +118,16 @@ export async function fetchActivity(conn: Connection, owner: string, limit = 15)
       sigs.map((s) => s.signature),
       { maxSupportedTransactionVersion: 0 },
     );
-  } catch {
-    parsed = sigs.map(() => null);
+  } catch (e) {
+    console.warn("fetchActivity batch failed, falling back to individual requests:", e);
+    try {
+      parsed = await Promise.all(
+        sigs.map((s) => conn.getParsedTransaction(s.signature, { maxSupportedTransactionVersion: 0 }))
+      );
+    } catch (e2) {
+      console.warn("fetchActivity individual requests failed:", e2);
+      parsed = sigs.map(() => null);
+    }
   }
 
   return sigs.map((sig, i) => {
