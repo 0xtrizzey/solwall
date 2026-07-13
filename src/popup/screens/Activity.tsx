@@ -55,6 +55,12 @@ export function Activity({ snap }: { snap: Snapshot }) {
     );
   }
 
+  const hiddenSpamCount = state.items.filter((item) => {
+    if (!item.isSpam) return false;
+    const isSaved = item.counterparty && (snap.addressBook ?? []).some((e) => e.address.trim().toLowerCase() === item.counterparty!.trim().toLowerCase());
+    return !isSaved;
+  }).length;
+
   const filteredItems = state.items.filter((item) => {
     if (!item.isSpam) return true;
     const isSaved = item.counterparty && (snap.addressBook ?? []).some((e) => e.address.trim().toLowerCase() === item.counterparty!.trim().toLowerCase());
@@ -115,13 +121,23 @@ export function Activity({ snap }: { snap: Snapshot }) {
         </div>
       ))}
       
-      {state.items.length > filteredItems.length && !showSpam && (
+      {hiddenSpamCount > 0 && !showSpam && (
         <button 
           className="chip" 
           style={{ margin: "16px auto", display: "block" }} 
           onClick={() => setShowSpam(true)}
         >
-          Show {state.items.length - filteredItems.length} hidden spam transactions
+          Show {hiddenSpamCount} hidden spam transactions
+        </button>
+      )}
+      
+      {showSpam && hiddenSpamCount > 0 && (
+        <button 
+          className="chip" 
+          style={{ margin: "16px auto", display: "block" }} 
+          onClick={() => setShowSpam(false)}
+        >
+          Hide spam transactions
         </button>
       )}
       
