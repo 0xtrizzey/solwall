@@ -3,14 +3,22 @@ import { makeConnection } from "../../lib/rpc";
 import { fetchOnchainMeta } from "../../lib/tokens";
 import type { Snapshot } from "../../lib/types";
 import { usePortfolio } from "../balances";
-import { EmptyState, SkeletonRows } from "../components";
-import { IconGem } from "../icons";
+import { Btn, EmptyState, SkeletonRows } from "../components";
+import { IconGem, IconWarning } from "../icons";
 
 interface NftCard {
   mint: string;
   name: string;
   image: string | null;
+  pendingHttpMetaUri?: string;
+  pendingHttpImageUri?: string;
 }
+
+const resolveGateway = (uri: string): string => {
+  if (uri.startsWith("ipfs://")) return uri.replace("ipfs://", "https://ipfs.io/ipfs/");
+  if (uri.startsWith("ar://")) return uri.replace("ar://", "https://arweave.net/");
+  return uri;
+};
 
 const cardCache = new Map<string, NftCard>();
 
@@ -18,6 +26,34 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
   const active = snap.pub.active!;
   const { portfolio } = usePortfolio(active.pubkey, snap.pub.network, snap.pub.customRpcUrl);
   const [cards, setCards] = useState<NftCard[] | null>(null);
+
+  const loadHttp = async (mint: string) => {
+    // Optimistic UI update (could add a loading state here if needed)
+    setCards((prev) => (prev ? [...prev] : null));
+
+    const card = cardCache.get(mint);
+    if (!card) return;
+
+    try {
+      if (card.pendingHttpMetaUri) {
+        const json = await fetch(card.pendingHttpMetaUri, { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
+        if (typeof json?.name === "string" && json.name) card.name = json.name;
+        if (typeof json?.image === "string") {
+          if (json.image.startsWith("http")) card.image = json.image;
+          else if (/^(ipfs|ar):\/\//.test(json.image)) card.image = resolveGateway(json.image);
+        }
+        card.pendingHttpMetaUri = undefined;
+      } else if (card.pendingHttpImageUri) {
+        card.image = card.pendingHttpImageUri;
+        card.pendingHttpImageUri = undefined;
+      }
+    } catch {
+      // Failed to load
+    }
+    
+    // Trigger re-render
+    setCards((prev) => (prev ? [...prev] : null));
+  };
 
   useEffect(() => {
     if (portfolio.status !== "ready") return;
@@ -34,14 +70,17 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
           try {
             const meta = await fetchOnchainMeta(conn, nft.mint);
             if (meta?.name) card.name = meta.name;
-            if (meta?.uri && /^https?:/.test(meta.uri)) {
-              const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(meta.uri)}`;
-              const json = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
-              if (typeof json?.image === "string" && /^https?:/.test(json.image)) {
-                // Route image through Cloudflare CDN proxy
-                card.image = `https://wsrv.nl/?url=${encodeURIComponent(json.image)}`;
+            if (meta?.uri) {
+              if (/^(ipfs|ar):\/\//.test(meta.uri)) {
+                const json = await fetch(resolveGateway(meta.uri), { signal: AbortSignal.timeout(5000), referrerPolicy: "no-referrer" }).then((r) => r.json());
+                if (typeof json?.name === "string" && json.name) card.name = json.name;
+                if (typeof json?.image === "string") {
+                  if (json.image.startsWith("http")) card.pendingHttpImageUri = json.image;
+                  else if (/^(ipfs|ar):\/\//.test(json.image)) card.image = resolveGateway(json.image);
+                }
+              } else if (meta.uri.startsWith("http")) {
+                card.pendingHttpMetaUri = meta.uri;
               }
-              if (typeof json?.name === "string" && json.name) card.name = json.name;
             }
           } catch {
             // leave placeholder card
@@ -87,6 +126,11 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
         <div key={c.mint} className="nft-card">
           {c.image ? (
             <img src={c.image} alt={c.name} loading="lazy" referrerPolicy="no-referrer" />
+          ) : c.pendingHttpImageUri || c.pendingHttpMetaUri ? (
+            <div className="nft-fallback blocked-http" style={{ flexDirection: "column", gap: "8px", padding: "12px", textAlign: "center" }}>
+              <IconWarning size={20} />
+              <Btn size="sm" variant="outline" onClick={() => loadHttp(c.mint)}>Load<br/>(IP Warning)</Btn>
+            </div>
           ) : (
             <div className="nft-fallback">
               <IconGem size={24} />
