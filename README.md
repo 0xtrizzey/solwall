@@ -25,7 +25,7 @@ If you prefer to compile the wallet yourself directly from the source code:
 1. `npm install && npm run build` → produces the `dist/` folder.
 2. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `SOLWALL/dist`
 
-### Option 3: Verify Download (Tails-Style Security)
+### Option 3: Verify Download
 
 For maximum security, you can mathematically verify that your downloaded `solwall.zip` has not been tampered with:
 

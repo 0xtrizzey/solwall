@@ -174,7 +174,20 @@ function TxPreview({ analysis, host }: { analysis: TxAnalysis | "loading" | null
       </div>
     );
   }
-  const bareOk = analysis.status === "ok" && analysis.solDelta == null && analysis.lines.length === 0;
+  // "Couldn't verify" = the simulation could not compute the balance change
+  // (RPC returned no account data, unsupported method, non-mainnet). That is NOT
+  // evidence of a drain — it's simply no signal, and must never be shown as a
+  // scary alert, or false alarms train users to ignore the real warnings.
+  const couldNotVerify = analysis.status === "unknown" || (analysis.status === "ok" && analysis.solDelta == null);
+  // Genuine soft signal: simulation SUCCEEDED and showed ~zero SOL change, yet
+  // the transaction touches an unverified program and decodes to nothing
+  // recognisable — worth a measured heads-up, not a "drain detected" claim.
+  const zeroChangeUnknownCode =
+    analysis.status === "ok" &&
+    analysis.solDelta != null &&
+    Math.abs(analysis.solDelta) < 1e-9 &&
+    analysis.lines.length === 0 &&
+    analysis.hasUnknownPrograms;
   return (
     <div className="tx-preview">
       {analysis.status === "will-fail" && (
@@ -203,15 +216,15 @@ function TxPreview({ analysis, host }: { analysis: TxAnalysis | "loading" | null
       )}
       {analysis.programs.length > 0 && <div className="tx-programs">via {analysis.programs.join(" · ")}</div>}
       {analysis.extraTxCount > 0 && <div className="tx-note">+{analysis.extraTxCount} more transaction(s) in this request</div>}
-      {bareOk && analysis.hasUnknownPrograms ? (
-        <div className="callout danger">
-          <IconWarning size={16} />
-          🚨 HIGH RISK: This transaction interacts with unverified smart contracts but shows no balance changes. It may be a 'chameleon' contract attempting to evade security checks and drain your wallet. Only sign if you absolutely trust the dApp.
-        </div>
-      ) : bareOk && !analysis.hasUnknownPrograms ? (
+      {couldNotVerify ? (
         <div className="callout warn">
           <IconWarning size={16} />
-          Limited preview — no balance change detected. Only approve if you trust {host}.
+          This transaction couldn't be simulated, so its effect can't be verified here. Approve only if you trust {host}.
+        </div>
+      ) : zeroChangeUnknownCode ? (
+        <div className="callout warn">
+          <IconWarning size={16} />
+          Simulation shows no SOL change, but this interacts with an unverified program. Some contracts hide their real effect — only sign if you expected this from {host}.
         </div>
       ) : null}
     </div>

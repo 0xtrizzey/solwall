@@ -322,12 +322,11 @@ export async function handleMessage(
   sender: { origin?: string; trusted?: boolean } = {},
 ): Promise<BgResponse> {
   try {
-    // Only first-party (popup / approval-window) activity keeps the wallet
-    // awake; a connected dApp polling getNetwork must NOT defeat auto-lock.
-    if (sender.trusted) {
-      const pubState = await getPub();
-      resetAutoLock(pubState.autoLockMinutes);
-    }
+    // Auto-lock is driven purely by genuine user activity: it is armed on
+    // unlock/create and re-armed only by the heartbeat message (which our UI
+    // sends on mousemove/keydown). Internal or programmatic messages — snapshot
+    // polls, an idle approval window sitting open, dApp calls — must NOT extend
+    // the unlock window. (`sender.trusted` is still enforced by the router.)
 
     switch (msg.type) {
       case "getSnapshot":
@@ -356,6 +355,7 @@ export async function handleMessage(
         await localSet(STORAGE_KEYS.vault, blob);
         await sessionSet(STORAGE_KEYS.session, { secrets, keyB64: await exportSessionKey(key) } satisfies SessionData);
         await setPub(pub);
+        resetAutoLock(pub.autoLockMinutes);
         return ok(await snapshot());
       }
 
@@ -372,6 +372,7 @@ export async function handleMessage(
           secrets: JSON.parse(opened.plaintext),
           keyB64: await exportSessionKey(opened.key),
         } satisfies SessionData);
+        resetAutoLock((await getPub()).autoLockMinutes);
         return ok(await snapshot());
       }
 
