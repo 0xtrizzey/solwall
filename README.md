@@ -25,6 +25,14 @@ If you prefer to compile the wallet yourself directly from the source code:
 1. `npm install && npm run build` → produces the `dist/` folder.
 2. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `SOLWALL/dist`
 
+### Option 3: Verify Download (Tails-Style Security)
+
+For maximum security, you can mathematically verify that your downloaded `solwall.zip` has not been tampered with:
+
+1. Download both the `solwall.zip` and the `.sig` (signature) file from the Releases page.
+2. Verify the PGP signature against the developer's public key to ensure it was signed by the original author.
+3. **Reproducible Builds:** You can compile the ZIP yourself directly from the source code. Because SOLWALL uses deterministic builds, your locally compiled SHA-256 hash will perfectly match the official release hash, proving the binary matches the open-source code.
+
 ## Features
 
 - **Onboarding** — create a 12-word wallet (reveal + 3-word verification quiz) or import a recovery phrase / base58 private key
