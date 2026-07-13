@@ -33,7 +33,7 @@ export function Collectibles({ snap }: { snap: Snapshot }) {
             const meta = await fetchOnchainMeta(conn, nft.mint);
             if (meta?.name) card.name = meta.name;
             if (meta?.uri && /^https?:/.test(meta.uri)) {
-              const json = await fetch(meta.uri).then((r) => r.json());
+              const json = await fetch(meta.uri, { signal: AbortSignal.timeout(5000) }).then((r) => r.json());
               if (typeof json?.image === "string" && /^https?:/.test(json.image)) card.image = json.image;
               if (typeof json?.name === "string" && json.name) card.name = json.name;
             }
