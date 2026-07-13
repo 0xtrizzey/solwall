@@ -67,7 +67,7 @@ export function Activity({ snap }: { snap: Snapshot }) {
         <div key={g.label} className="activity-group">
           <div className="group-label">{g.label}</div>
           {g.items.map((item) => {
-            const saved = item.counterparty ? (snap.addressBook ?? []).find((e) => e.address === item.counterparty) : null;
+            const saved = item.counterparty ? (snap.addressBook ?? []).find((e) => e.address.trim().toLowerCase() === item.counterparty!.trim().toLowerCase()) : null;
             const counterpartyDisplay = saved ? saved.name : (item.counterparty ? truncateAddress(item.counterparty, 4) : "Unknown");
             
             return (
@@ -99,7 +99,7 @@ export function Activity({ snap }: { snap: Snapshot }) {
       
       <Sheet open={selectedTx !== null} onClose={() => setSelectedTx(null)} title="">
         {selectedTx && (() => {
-            const saved = selectedTx.counterparty ? (snap.addressBook ?? []).find((e) => e.address === selectedTx.counterparty) : null;
+            const saved = selectedTx.counterparty ? (snap.addressBook ?? []).find((e) => e.address.trim().toLowerCase() === selectedTx.counterparty!.trim().toLowerCase()) : null;
             const cpDisplay = saved ? saved.name : (selectedTx.counterparty ? truncateAddress(selectedTx.counterparty, 4) : "Unknown");
             
             return (

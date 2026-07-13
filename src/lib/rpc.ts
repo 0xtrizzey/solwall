@@ -241,7 +241,15 @@ function classify(tx: ParsedTransactionWithMeta, owner: string, base: ActivityIt
                     }
                 }
             }
-            counterparty = address;
+            
+            // If this account is a token account, resolve to its actual owner wallet
+            const tb = meta.postTokenBalances?.find(b => b.accountIndex === i);
+            if (tb && tb.owner) {
+              counterparty = tb.owner;
+            } else {
+              counterparty = address;
+            }
+            
             if (counterparty) break;
           }
         }
