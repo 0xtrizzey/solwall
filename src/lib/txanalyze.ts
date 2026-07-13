@@ -6,8 +6,8 @@
 // can't preview, the screen says so and the user can still reject.
 
 import { Connection, PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
-import { formatAmount, truncateAddress, LAMPORTS } from "./format";
-import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./spl";
+import { formatAmount, truncateAddress, LAMPORTS, bytesFromB64 } from "./format";
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress } from "./spl";
 import { isVersionedTransaction } from "./txbytes";
 
 export interface TxLine {
@@ -115,6 +115,55 @@ async function simulate(
   const tx = Transaction.from(bytes);
   const res = await conn.simulateTransaction(tx, undefined, [new PublicKey(owner)]);
   return { err: res.value.err, ownerPostLamports: res.value.accounts?.[0]?.lamports ?? null };
+}
+
+/** Raw amount (u64) at offset 64 of an SPL token account under simulation. */
+async function simulateTokenAccountAmount(conn: Connection, bytes: Uint8Array, ata: PublicKey): Promise<bigint | null> {
+  let accounts;
+  if (isVersionedTransaction(bytes)) {
+    const res = await conn.simulateTransaction(VersionedTransaction.deserialize(bytes), {
+      sigVerify: false,
+      replaceRecentBlockhash: true,
+      accounts: { encoding: "base64", addresses: [ata.toBase58()] },
+    });
+    accounts = res.value.accounts;
+  } else {
+    const res = await conn.simulateTransaction(Transaction.from(bytes), undefined, [ata]);
+    accounts = res.value.accounts;
+  }
+  const acc = accounts?.[0];
+  if (!acc || !acc.data) return null;
+  const b64 = Array.isArray(acc.data) ? acc.data[0] : typeof acc.data === "string" ? acc.data : null;
+  if (!b64) return null;
+  const data = bytesFromB64(b64);
+  if (data.length < 72) return null; // SPL token account layout: amount is u64 LE at offset 64
+  return new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(64, true);
+}
+
+/**
+ * Raw amount of `mint` the owner SPENDS under simulation (current − post), or
+ * null if it can't be determined. Guards a swap against an API that returns a
+ * transaction draining more of the *input token* than quoted. Assumes the
+ * classic SPL Token program (the swap UI's token list is all classic SPL); if
+ * the ATA can't be read the check simply returns null and does not block.
+ */
+export async function simulateTokenSpend(
+  conn: Connection,
+  txBytes: Uint8Array,
+  owner: string,
+  mint: string,
+): Promise<bigint | null> {
+  try {
+    const ata = getAssociatedTokenAddress(new PublicKey(mint), new PublicKey(owner));
+    const [currentRaw, postRaw] = await Promise.all([
+      conn.getTokenAccountBalance(ata).then((r) => BigInt(r.value.amount)).catch(() => null),
+      simulateTokenAccountAmount(conn, txBytes, ata).catch(() => null),
+    ]);
+    if (currentRaw == null || postRaw == null) return null;
+    return currentRaw - postRaw; // positive = tokens leaving the wallet
+  } catch {
+    return null;
+  }
 }
 
 export async function analyzeTransaction(

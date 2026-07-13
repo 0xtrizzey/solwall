@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatAmount, truncateAddress, parseAmountToRaw, bytesFromB64 } from "../../lib/format";
 import { getQuote, getSwapTransaction, type SwapQuote } from "../../lib/jupiter";
 import { explorerTxUrl, makeConnection, waitForSignature } from "../../lib/rpc";
-import { analyzeTransaction } from "../../lib/txanalyze";
+import { analyzeTransaction, simulateTokenSpend } from "../../lib/txanalyze";
 import { KNOWN_TOKENS, WSOL_MINT } from "../../lib/tokens";
 import type { Snapshot } from "../../lib/types";
 import { friendlyRpcError, friendlyTxError } from "../../lib/errors";
@@ -94,6 +94,16 @@ export function Swap({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }
         // solDelta is negative for spending. Allow a small buffer (0.05 SOL) for network/ATA rent fees.
         if (analysis.solDelta != null && analysis.solDelta < -(expectedSpent + 0.05)) {
           throw new Error("SECURITY ALERT: API compromise detected. Transaction attempts to drain more SOL than quoted.");
+        }
+      } else {
+        // Input is an SPL token: verify the tx spends no more of it than quoted.
+        // A legitimate swap debits exactly quote.inAmount; allow 1% for rounding.
+        const spent = await simulateTokenSpend(conn, bytesFromB64(txB64), active.pubkey, from.mint);
+        if (spent != null) {
+          const quotedIn = BigInt(quote.inAmount);
+          if (spent > quotedIn + quotedIn / 100n) {
+            throw new Error(`SECURITY ALERT: API compromise detected. Transaction spends more ${from.symbol} than quoted.`);
+          }
         }
       }
 

@@ -10,7 +10,7 @@ This document serves as a persistent memory bank of all expert-level security ha
 
 ### 1.2 Zero-Trust API Architecture (Jupiter Swap)
 *   **The Threat:** Supply-chain API attacks. If the Jupiter Swap API was compromised, it could return a malicious transaction payload that sends funds directly to an attacker instead of swapping.
-*   **The Defense (partial):** Swap.tsx locally **simulates** the transaction returned by Jupiter *before* signing, and aborts if it will fail. For **SOL-spend swaps** it also blocks when the simulated SOL outflow exceeds the quoted input by more than a small fee buffer. Limitation: this currently covers SOL outflow only — a swap that drains an SPL **token** balance beyond the quote is not yet caught. Treat it as defence-in-depth, not a guarantee.
+*   **The Defense:** Swap.tsx locally **simulates** the transaction returned by Jupiter *before* signing, and aborts if it will fail. It then verifies the *input* outflow against the quote: for **SOL-spend swaps** it blocks when the simulated SOL outflow exceeds the quoted input by more than a small fee buffer; for **SPL-token swaps** it reads the input token account under simulation and blocks when it is debited more than ~1% over the quoted amount (see `simulateTokenSpend` in src/lib/txanalyze.ts). Both are defence-in-depth heuristics, not guarantees — they cover the *input* asset being swapped (not arbitrary unrelated balances) and assume the classic SPL Token program; if the balance can't be read the swap is not blocked.
 
 ### 1.3 Price Feed Sanity Bounds
 *   **The Threat:** Compromised fiat (CoinGecko) APIs could return mathematically impossible values (e.g., SOL = $1,000,000 or NaN) to cause UI spoofing or crashes.
@@ -55,6 +55,11 @@ This document serves as a persistent memory bank of all expert-level security ha
 *   **What was wrong:** Auto-lock reset on *every* first-party message, so snapshot polls, an idle-but-open approval window, and other internal traffic could keep the vault unlocked while the user was not actually present.
 *   **The fix (src/background/handlers.ts):** The timer is armed on unlock/create and re-armed **only** by the heartbeat message, which the UI sends solely on real mousemove/keydown activity. Internal/programmatic messages no longer extend the unlock window.
 *   **Why:** Auto-lock should measure *user presence*, not extension chatter. An idle session now actually locks.
+
+### 4.4 Swap drain-check extended to SPL tokens (2026-07-13)
+*   **What was missing:** the Jupiter drain check only guarded SOL outflow, so a compromised API returning a tx that drains the *input token* (token→token / token→SOL swaps) beyond the quote wasn't caught.
+*   **The fix:** `simulateTokenSpend` reads the owner's input-token account under simulation (u64 amount at offset 64), compares the debit to `quote.inAmount`, and blocks a swap that spends >1% over quote. Fail-open if the account can't be read (never blocks a legitimate swap). Verified: parsing correct, legit spend passes, 2× drain blocked.
+*   **Why:** the input asset is the one at risk of being over-spent; guarding only SOL left every token swap unprotected.
 
 ### 4.3 Honesty pass on this document + LICENSE
 *   Softened claims that stated heuristics or aspirations as guarantees ("API compromise detected", "100% deterministic", "Tails-OS level verification"). Fixed a malformed bound in §1.3.
