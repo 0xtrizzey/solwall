@@ -57,22 +57,22 @@ function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () =>
         <p className="tagline">Your keys. Your Solana. A wallet that never leaves your hands.</p>
       </div>
 
-      <div style={{ margin: "24px 24px 0 24px", textAlign: "left", background: "var(--surface)", padding: "16px", borderRadius: "12px", border: "1px solid var(--border)" }}>
-        <label style={{ display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" }}>
+      <div style={{ margin: "24px 24px 0 24px", textAlign: "center" }}>
+        <label style={{ display: "inline-flex", gap: "10px", alignItems: "center", cursor: "pointer", justifyContent: "center" }}>
           <input 
             type="checkbox" 
             checked={agreed} 
             onChange={(e) => setAgreed(e.target.checked)} 
-            style={{ marginTop: "2px" }}
+            style={{ margin: 0, width: "16px", height: "16px", cursor: "pointer" }}
           />
-          <span style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.4 }}>
-            I have read and agree to the{" "}
-            <button 
-              className="text-link" 
+          <span style={{ fontSize: "13px", color: "var(--muted)" }}>
+            I agree to the{" "}
+            <span 
               onClick={(e) => { e.preventDefault(); setShowTerms(true); }}
+              style={{ color: "var(--accent)", textDecoration: "underline" }}
             >
               Terms & Legal Disclaimer
-            </button>.
+            </span>
           </span>
         </label>
       </div>
