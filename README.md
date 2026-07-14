@@ -35,6 +35,14 @@ For maximum security, you can mathematically verify that your downloaded `solwal
 2. Verify the PGP signature against the developer's public key to ensure it was signed by the original author.
 3. **Reproducible Builds:** You can compile the ZIP yourself directly from the source code. Because SOLWALL uses deterministic builds, your locally compiled SHA-256 hash will perfectly match the official release hash, proving the binary matches the open-source code.
 
+### Updating
+
+SOLWALL does not auto-update. You must manually check for updates on this GitHub repository.
+- **Easy Install:** Download the new release, replace your old extracted folder with the new one, and click the **Reload** icon 🔄 on the extension in `chrome://extensions`.
+- **Build from Source:** Pull the latest changes, run `npm run build`, and click the **Reload** icon 🔄 in Chrome.
+
+*(Note: Your wallets and settings will remain intact as long as you do not click "Remove" in Chrome. Overwriting the files and reloading preserves your storage).*
+
 ## Features
 
 - **Onboarding** — create a 12-word wallet (reveal + 3-word verification quiz) or import a recovery phrase / base58 private key
