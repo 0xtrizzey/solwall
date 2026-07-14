@@ -242,6 +242,9 @@ export function Swap({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }
             >
               {amountNum > fromBalance ? `Not enough ${from.symbol}` : "Swap"}
             </Btn>
+            <p className="fine-print center" style={{ marginTop: "12px", color: "var(--muted)", lineHeight: 1.4 }}>
+              Swaps are executed via Jupiter (3rd party). Use at your own risk. The developer is not liable for failed swaps or price impact.
+            </p>
           </div>
         </div>
       )}

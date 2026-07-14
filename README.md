@@ -2,6 +2,8 @@
 
 Non-custodial Solana wallet as a Chrome (MV3) extension. Obsidian-dark UI with a solar-gold identity — deliberately not another purple wallet.
 
+> **⚠️ LEGAL DISCLAIMER:** This is a strictly experimental, non-commercial open-source project. The author assumes **no liability** for any loss of funds or damages. By using this software, you agree to the terms outlined in the [DISCLAIMER.md](./DISCLAIMER.md).
+
 ## Installation
 
 SOLWALL is a secure, Chrome-compatible extension (Manifest V3).

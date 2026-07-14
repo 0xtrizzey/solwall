@@ -45,6 +45,8 @@ export function Onboarding() {
 }
 
 function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+
   return (
     <div className="onboard-welcome">
       <div className="solar-field" aria-hidden />
@@ -53,11 +55,26 @@ function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () =>
         <h1 className="wordmark">SOLWALL</h1>
         <p className="tagline">Your keys. Your Solana. A wallet that never leaves your hands.</p>
       </div>
+
+      <div style={{ margin: "24px 24px 0 24px", textAlign: "left", background: "var(--surface)", padding: "16px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+        <label style={{ display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" }}>
+          <input 
+            type="checkbox" 
+            checked={agreed} 
+            onChange={(e) => setAgreed(e.target.checked)} 
+            style={{ marginTop: "4px" }}
+          />
+          <span style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.4 }}>
+            I understand this is experimental open-source software provided "as is" with no warranty. I accept full responsibility for my keys and funds, and waive all liability claims.
+          </span>
+        </label>
+      </div>
+
       <div className="welcome-actions">
-        <Btn size="lg" onClick={onCreate}>
+        <Btn size="lg" disabled={!agreed} onClick={onCreate}>
           Create a new wallet
         </Btn>
-        <Btn size="lg" variant="outline" onClick={onImport}>
+        <Btn size="lg" disabled={!agreed} variant="outline" onClick={onImport}>
           I already have a wallet
         </Btn>
         <p className="fine-print">Non-custodial · keys are encrypted on this device and never sent anywhere.</p>
