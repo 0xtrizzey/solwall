@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { isValidMnemonic, newMnemonic, type SchemeId } from "../../lib/keyring";
 import type { Snapshot } from "../../lib/types";
 import { bg } from "../bg";
-import { Btn, Field } from "../components";
+import { Btn, Field, Sheet } from "../components";
 import { IconBack, IconCheck, IconCopy, IconEye, IconKey, IconSeed, IconWarning, Logo } from "../icons";
 import { useCopy, useStore } from "../store";
 
@@ -46,6 +46,7 @@ export function Onboarding() {
 
 function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () => void }) {
   const [agreed, setAgreed] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   return (
     <div className="onboard-welcome">
@@ -62,10 +63,16 @@ function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () =>
             type="checkbox" 
             checked={agreed} 
             onChange={(e) => setAgreed(e.target.checked)} 
-            style={{ marginTop: "4px" }}
+            style={{ marginTop: "2px" }}
           />
-          <span style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.4 }}>
-            I understand this is experimental open-source software provided "as is" with no warranty. I accept full responsibility for my keys and funds, and waive all liability claims.
+          <span style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.4 }}>
+            I have read and agree to the{" "}
+            <button 
+              className="text-link" 
+              onClick={(e) => { e.preventDefault(); setShowTerms(true); }}
+            >
+              Terms & Legal Disclaimer
+            </button>.
           </span>
         </label>
       </div>
@@ -79,6 +86,29 @@ function Welcome({ onCreate, onImport }: { onCreate: () => void; onImport: () =>
         </Btn>
         <p className="fine-print">Non-custodial · keys are encrypted on this device and never sent anywhere.</p>
       </div>
+
+      <Sheet open={showTerms} onClose={() => setShowTerms(false)} title="Legal Disclaimer">
+        <div style={{ fontSize: "13px", color: "var(--text)", lineHeight: 1.5, display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "24px" }}>
+          <p>This software project is a strictly experimental, non-commercial, open-source educational project.</p>
+          <div>
+            <strong style={{ color: "var(--danger)" }}>1. No Liability</strong>
+            <p style={{ color: "var(--muted)", marginTop: "4px" }}>The developer assumes absolutely no liability for any direct or indirect damages, loss of funds, data, or keys resulting from the use of this software. You use this software entirely at your own risk.</p>
+          </div>
+          <div>
+            <strong>2. No Warranty</strong>
+            <p style={{ color: "var(--muted)", marginTop: "4px" }}>The software is provided "as is", without warranty of any kind, express or implied. There is no guarantee that the software is error-free or secure.</p>
+          </div>
+          <div>
+            <strong>3. No Data Collection</strong>
+            <p style={{ color: "var(--muted)", marginTop: "4px" }}>The developer never has access to your private keys or funds. All data is encrypted and stored exclusively locally. There is no telemetry or data collection.</p>
+          </div>
+          <div>
+            <strong>4. Third-Party Services</strong>
+            <p style={{ color: "var(--muted)", marginTop: "4px" }}>This wallet relies on third-party APIs (Jupiter, Solscan, RPC nodes). The developer has no control over these services and assumes no responsibility for them.</p>
+          </div>
+          <Btn size="md" onClick={() => setShowTerms(false)}>I Understand</Btn>
+        </div>
+      </Sheet>
     </div>
   );
 }
