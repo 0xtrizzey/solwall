@@ -4,10 +4,11 @@ import { truncateAddress } from "../../lib/format";
 import { NETWORKS, type NetworkId, type Snapshot } from "../../lib/types";
 import { bg } from "../bg";
 import { Btn, Divider, Field, Row, Sheet } from "../components";
-import { IconCheck, IconChevronR, IconGlobe, IconKey, IconLink, IconLock, IconShield, IconTrash, IconWallet, IconWarning } from "../icons";
+import { IconCheck, IconChevronR, IconCopy, IconGlobe, IconKey, IconLink, IconLock, IconShield, IconTrash, IconWallet, IconWarning } from "../icons";
 import { useStore } from "../store";
+import { QrCode } from "../qr";
 
-type SheetId = "none" | "networks" | "security" | "sites" | "reset" | "fiat" | "password" | "addressbook";
+type SheetId = "none" | "networks" | "security" | "sites" | "reset" | "fiat" | "password" | "addressbook" | "donate";
 
 export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }) {
   const { refresh, toast } = useStore();
@@ -16,6 +17,11 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
   const lock = async () => {
     await bg({ type: "lock" });
     await refresh();
+  };
+
+  const copy = async (text: string, msg: string) => {
+    await navigator.clipboard.writeText(text);
+    toast(msg, "success");
   };
 
   const sites = Object.entries(snap.connectedSites ?? {});
@@ -79,7 +85,12 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
         <Row left={<IconLock size={18} />} title="Lock wallet" onClick={() => void lock()} />
         <Row left={<IconTrash size={18} />} title="Reset SOLWALL" sub="Erase this device" danger onClick={() => setSheet("reset")} />
       </div>
-      <div className="about">SOLWALL v1.0.0 · non-custodial · keys never leave this device</div>
+      <div className="about">
+        SOLWALL v1.0.0 · non-custodial · keys never leave this device
+        <div style={{ marginTop: "12px" }}>
+          <button className="text-link" onClick={() => setSheet("donate")}>❤️ Donate to support the project</button>
+        </div>
+      </div>
 
       {/* networks */}
       <Sheet open={sheet === "networks"} onClose={() => setSheet("none")} title="Network">
@@ -200,6 +211,41 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
       {/* reset */}
       <Sheet open={sheet === "reset"} onClose={() => setSheet("none")} title="Reset SOLWALL">
         <ResetSheet onDone={() => void refresh()} />
+      </Sheet>
+
+      {/* donate */}
+      <Sheet open={sheet === "donate"} onClose={() => setSheet("none")} title="Support SOLWALL">
+        <p className="sheet-text" style={{ marginBottom: "24px", textAlign: "center" }}>
+          If you find this project useful, consider supporting its development with a donation. Thank you! ❤️
+        </p>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          <div className="receive-card" style={{ padding: "16px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "14px", color: "var(--text)", textAlign: "center" }}>Solana (SOL)</h3>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+              <QrCode value="gAJ9YBNnNrevtKDi2aFw2WiPWR93KhftCvJWV2Q8qEQ" />
+            </div>
+            <div className="mono" style={{ fontSize: "11px", wordBreak: "break-all", textAlign: "center", color: "var(--muted)", marginBottom: "16px" }}>
+              gAJ9YBNnNrevtKDi2aFw2WiPWR93KhftCvJWV2Q8qEQ
+            </div>
+            <Btn size="md" variant="outline" onClick={() => void copy("gAJ9YBNnNrevtKDi2aFw2WiPWR93KhftCvJWV2Q8qEQ", "SOL Address copied")} style={{ width: "100%" }}>
+              <IconCopy size={14} /> Copy SOL Address
+            </Btn>
+          </div>
+
+          <div className="receive-card" style={{ padding: "16px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "14px", color: "var(--text)", textAlign: "center" }}>Monero (XMR)</h3>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+              <QrCode value="88YUhLmDGqgJbFBHVaSsywVZ6B5HBHUKuhx2tvx8iQWyLJ3EgtRXkxCjVV8M5t64akf6HAGUzhuCGBgtBqDjQwMjM4FFPon" />
+            </div>
+            <div className="mono" style={{ fontSize: "11px", wordBreak: "break-all", textAlign: "center", color: "var(--muted)", marginBottom: "16px" }}>
+              88YUhLmDGqgJbFBHVaSsywVZ6B5HBHUKuhx2tvx8iQWyLJ3EgtRXkxCjVV8M5t64akf6HAGUzhuCGBgtBqDjQwMjM4FFPon
+            </div>
+            <Btn size="md" variant="outline" onClick={() => void copy("88YUhLmDGqgJbFBHVaSsywVZ6B5HBHUKuhx2tvx8iQWyLJ3EgtRXkxCjVV8M5t64akf6HAGUzhuCGBgtBqDjQwMjM4FFPon", "XMR Address copied")} style={{ width: "100%" }}>
+              <IconCopy size={14} /> Copy XMR Address
+            </Btn>
+          </div>
+        </div>
       </Sheet>
     </div>
   );
