@@ -13,7 +13,7 @@ const PRIVILEGED = new Set<string>([
   "getSnapshot", "createVault", "unlock", "lock", "addMnemonicWallet", "importPrivateKey",
   "addAccount", "renameAccount", "renameWallet", "removeWallet", "setActive", "setNetwork",
   "setAutoLock", "setFiat", "changePassword", "addAddress", "removeAddress",
-  "revealMnemonic", "revealPrivateKey", "signAndSend", "signMessageLocal",
+  "revealMnemonic", "revealPrivateKey", "signAndSend",
   "revokeSite", "getApproval", "resolveApproval", "resetWallet", "heartbeat",
 ]);
 

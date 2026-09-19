@@ -42,7 +42,7 @@ import {
 } from "../lib/types";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
-import { isVersionedTransaction } from "../lib/txbytes";
+import { isVersionedTransaction, looksLikeTransactionPayload } from "../lib/txbytes";
 
 export { newMnemonic, isValidMnemonic };
 
@@ -567,15 +567,6 @@ export async function handleMessage(
         return ok({ signature: sig });
       }
 
-      case "signMessageLocal": {
-        const session = await requireSession();
-        const pub = await getPub();
-        if (!pub.active) throw new Error("No active account");
-        const kp = keypairFor(session.secrets, pub, pub.active.pubkey);
-        const sig = nacl.sign.detached(bytesFromB64(msg.messageB64), kp.secretKey);
-        return ok({ signatureB58: bs58.encode(sig) });
-      }
-
       case "revokeSite": {
         const session = await requireSession();
         if (session.secrets.connectedSites) {
@@ -669,6 +660,21 @@ async function handleDapp(origin: string, method: DappMethod, params: DappParams
     case "signMessage": {
       if (!site) return { ok: false, error: "Not connected — call connect() first" };
       if (!params.messageB64) return { ok: false, error: "Missing message" };
+      // We sign the raw bytes (dApps verify against exactly what they handed us),
+      // so the only thing standing between signMessage and a replayable transaction
+      // signature is this check. It must reject bare compiled messages too.
+      let bytes: Uint8Array;
+      try {
+        bytes = bytesFromB64(params.messageB64);
+      } catch {
+        return { ok: false, error: "Invalid message encoding" };
+      }
+      if (looksLikeTransactionPayload(bytes)) {
+        return {
+          ok: false,
+          error: "Refused: this message is a Solana transaction. Use signTransaction — signing it as a message would produce a replayable transaction signature.",
+        };
+      }
       return awaitApproval(origin, { kind: "signMessage", messageB64: params.messageB64 });
     }
 
@@ -727,22 +733,16 @@ async function resolveApproval(id: string, approved: boolean, chosenPubkey?: str
     const kp = keypairFor(session.secrets, pub, site.pubkey);
 
     if (request.payload.kind === "signMessage") {
+      // Sign the RAW bytes. Every dApp (and the Wallet Standard `signedMessage`
+      // we hand back) verifies the signature against the exact bytes it supplied,
+      // so wrapping the payload in an envelope here silently breaks every sign-in
+      // flow. Replay safety comes from looksLikeTransactionPayload() in
+      // handleDapp, which refuses transactions and bare compiled messages.
       const rawBytes = bytesFromB64(request.payload.messageB64);
-      
-      // SIP-8 Off-Chain Message Standard Envelope
-      const prefix = new TextEncoder().encode("solana offchain");
-      const envelope = new Uint8Array(1 + prefix.length + 2 + 2 + rawBytes.length);
-      envelope[0] = 255; // \xff
-      envelope.set(prefix, 1);
-      // Format 0 (2 bytes, little endian)
-      envelope[1 + prefix.length] = 0;
-      envelope[1 + prefix.length + 1] = 0;
-      // Length of message (2 bytes, little endian)
-      envelope[1 + prefix.length + 2] = rawBytes.length & 0xff;
-      envelope[1 + prefix.length + 3] = (rawBytes.length >> 8) & 0xff;
-      envelope.set(rawBytes, 1 + prefix.length + 4);
-
-      const sig = nacl.sign.detached(envelope, kp.secretKey);
+      if (looksLikeTransactionPayload(rawBytes)) {
+        throw new Error("Refused: message is a Solana transaction payload");
+      }
+      const sig = nacl.sign.detached(rawBytes, kp.secretKey);
       resolve({ ok: true, data: { signatureB58: bs58.encode(sig), publicKey: site.pubkey } });
       return ok({ done: true });
     }

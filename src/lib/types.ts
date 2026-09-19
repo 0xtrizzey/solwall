@@ -121,7 +121,6 @@ export type BgRequest =
   | { type: "revealMnemonic"; walletId: string; password: string }
   | { type: "revealPrivateKey"; walletId: string; pubkey: string; password: string }
   | { type: "signAndSend"; txB64: string }
-  | { type: "signMessageLocal"; messageB64: string }
   | { type: "revokeSite"; origin: string }
   | { type: "getApproval"; id: string }
   | { type: "resolveApproval"; id: string; approved: boolean; pubkey?: string }
