@@ -43,6 +43,7 @@ import {
 import bs58 from "bs58";
 import nacl from "tweetnacl";
 import { isVersionedTransaction, looksLikeTransactionPayload } from "../lib/txbytes";
+import { assertNoFieldInjection, buildSignInMessage, checkSignInInput } from "../lib/siws";
 
 export { newMnemonic, isValidMnemonic };
 
@@ -677,6 +678,32 @@ async function handleDapp(origin: string, method: DappMethod, params: DappParams
       }
       return awaitApproval(origin, { kind: "signMessage", messageB64: params.messageB64 });
     }
+    case "signIn": {
+      // SIWS replaces connect + signMessage in one step. The WALLET builds the
+      // message from the verified origin, so the user reads text we constructed
+      // rather than arbitrary text the site handed us.
+      if (!session) return { ok: false, error: "Wallet is locked" };
+      const input = params.signInInput ?? {};
+      try {
+        assertNoFieldInjection(input);
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
+      const signingAddress = site?.pubkey ?? pub.active?.pubkey;
+      if (!signingAddress) return { ok: false, error: "No account available" };
+      let originHost: string;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        return { ok: false, error: "Invalid origin" };
+      }
+      const owned = pub.wallets.flatMap((w) => w.accounts.map((a) => a.pubkey));
+      const checks = checkSignInInput(input, originHost, signingAddress, owned);
+      // Build with the claimed domain so a legitimate dApp can verify the exact
+      // message it expects; a mismatch drives a loud warning in the approval UI.
+      const message = buildSignInMessage(input, input.domain || originHost, signingAddress);
+      return awaitApproval(origin, { kind: "signIn", message, address: signingAddress, input, checks });
+    }
 
     case "signTransaction":
     case "signAllTransactions": {
@@ -725,6 +752,29 @@ async function resolveApproval(id: string, approved: boolean, chosenPubkey?: str
       session.secrets.connectedSites = connectedSites;
       await saveSession(session.secrets, session.keyB64);
       resolve({ ok: true, data: { publicKey: pubkey } });
+      return ok({ done: true });
+    }
+    if (request.payload.kind === "signIn") {
+      // MUST be the address embedded in the message we built — signing with any
+      // other key would produce a signature that contradicts the message text.
+      const pubkey = request.payload.address;
+      if (!pubkey) throw new Error("No account available");
+      if (!pub.wallets.some((w) => w.accounts.some((a) => a.pubkey === pubkey))) throw new Error("Account not found");
+      const messageBytes = new TextEncoder().encode(request.payload.message);
+      // Defence in depth: our own text can never be a transaction, but this path
+      // must never sign anything transaction-shaped either.
+      if (looksLikeTransactionPayload(messageBytes)) throw new Error("Refused: sign-in message is transaction-shaped");
+      const signInKp = keypairFor(session.secrets, pub, pubkey);
+      const signInSig = nacl.sign.detached(messageBytes, signInKp.secretKey);
+      // signIn also establishes the connection — it replaces connect + signMessage.
+      const sites = session.secrets.connectedSites ?? {};
+      sites[request.origin] = { pubkey, connectedAt: Date.now() };
+      session.secrets.connectedSites = sites;
+      await saveSession(session.secrets, session.keyB64);
+      resolve({
+        ok: true,
+        data: { publicKey: pubkey, signedMessageB64: b64FromBytes(messageBytes), signatureB58: bs58.encode(signInSig) },
+      });
       return ok({ done: true });
     }
 

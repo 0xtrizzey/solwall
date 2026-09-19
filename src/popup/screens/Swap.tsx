@@ -44,7 +44,7 @@ export function Swap({ snap, nav }: { snap: Snapshot; nav: (r: string) => void }
   const [quoteError, setQuoteError] = useState("");
   const [picker, setPicker] = useState<"from" | "to" | null>(null);
   const [phase, setPhase] = useState<Phase>({ id: "form" });
-  const debounce = useRef<number>();
+  const debounce = useRef<number | undefined>(undefined);
 
   const mainnet = snap.pub.network === "mainnet-beta";
   const amountNum = parseFloat(amount);

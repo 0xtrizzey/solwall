@@ -1,6 +1,7 @@
 // Shared types between popup, background, and content scripts.
 
 import type { SchemeId } from "./keyring";
+import type { SignInChecks, SolanaSignInInput } from "./siws";
 
 export type NetworkId = "mainnet-beta" | "devnet" | "testnet" | "custom";
 
@@ -88,7 +89,10 @@ export interface Snapshot {
 export type ApprovalPayload =
   | { kind: "connect" }
   | { kind: "signMessage"; messageB64: string }
-  | { kind: "signTransaction"; txsB64: string[]; send: boolean };
+  | { kind: "signTransaction"; txsB64: string[]; send: boolean }
+  // SIWS: the wallet builds `message` from `input` + the verified origin, so the
+  // approval screen shows text we constructed, not text the site supplied.
+  | { kind: "signIn"; message: string; address: string; input: SolanaSignInInput; checks: SignInChecks };
 
 export interface ApprovalRequest {
   id: string;
@@ -138,11 +142,13 @@ export type DappMethod =
   | "signTransaction"
   | "signAllTransactions"
   | "signAndSendTransaction"
+  | "signIn"
   | "getNetwork";
 
 export interface DappParams {
   messageB64?: string;
   txsB64?: string[];
+  signInInput?: SolanaSignInInput;
 }
 
 export type BgResponse<T = unknown> = { ok: true; data: T } | { ok: false; error: string };

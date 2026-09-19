@@ -247,6 +247,19 @@ class SolwallProvider {
     return { signature: res.signature, publicKey: new ProviderPublicKey(res.publicKey) };
   }
 
+  /** Phantom-compatible SIWS on the injected provider. */
+  async signIn(input?: any): Promise<any> {
+    const res = await request("signIn", { signInInput: input ?? {} });
+    this.publicKey = new ProviderPublicKey(res.publicKey);
+    this.isConnected = true;
+    this.emit("connect", this.publicKey);
+    return {
+      address: this.publicKey,
+      signedMessage: fromB64(res.signedMessageB64),
+      signature: b58decode(res.signatureB58),
+      signatureType: "ed25519",
+    };
+  }
   async request(args: { method: string; params?: any }): Promise<any> {
     switch (args?.method) {
       case "connect":
@@ -259,6 +272,8 @@ class SolwallProvider {
         return this.signTransaction(args.params?.transaction);
       case "signAndSendTransaction":
         return this.signAndSendTransaction(args.params?.transaction);
+      case "signIn":
+        return this.signIn(args.params);
       default:
         throw new Error(`Unsupported method: ${args?.method}`);
     }
@@ -325,6 +340,7 @@ class SolwallStandardWallet {
       "solana:signAndSendTransaction": { version: "1.0.0", supportedTransactionVersions: ["legacy", 0], signAndSendTransaction: this.#signAndSendTransaction },
       "solana:signTransaction": { version: "1.0.0", supportedTransactionVersions: ["legacy", 0], signTransaction: this.#signTransaction },
       "solana:signMessage": { version: "1.0.0", signMessage: this.#signMessage },
+      "solana:signIn": { version: "1.0.0", signIn: this.#signIn },
     };
   }
 
@@ -391,6 +407,25 @@ class SolwallStandardWallet {
     return out;
   };
 
+  // SIWS. The background builds the message from the verified origin and
+  // returns exactly what it signed, so signedMessage always matches signature.
+  #signIn = async (...inputs: any[]) => {
+    const list = inputs.length ? inputs : [{}];
+    const out: any[] = [];
+    for (const input of list) {
+      const res = await request("signIn", { signInInput: input ?? {} });
+      this.#setAccount(res.publicKey);
+      provider.publicKey = new ProviderPublicKey(res.publicKey);
+      provider.isConnected = true;
+      out.push({
+        account: this.#account,
+        signedMessage: fromB64(res.signedMessageB64),
+        signature: b58decode(res.signatureB58),
+        signatureType: "ed25519",
+      });
+    }
+    return out;
+  };
   _handleEvent(payload: { event: string; data?: any }) {
     if (payload.event === "accountChanged" && this.#account && payload.data?.publicKey) this.#setAccount(payload.data.publicKey);
     else if (payload.event === "disconnect" && this.#account) this.#setAccount(null);

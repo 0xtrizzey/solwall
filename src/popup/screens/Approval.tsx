@@ -120,6 +120,40 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
           </>
         )}
 
+        {kind === "signIn" && (
+          <>
+            <h1>Sign in to {host}?</h1>
+            {request.payload.checks.domainMismatch && (
+              <div className="callout danger">
+                <IconWarning size={16} />
+                You are on <strong>{host}</strong> but this request signs you in to{" "}
+                <strong>{request.payload.input.domain}</strong>. The signature could be replayed
+                against the real site. Only continue if you fully trust this page.
+              </div>
+            )}
+            <p className="approval-sub">
+              Signing proves you control this account. It costs nothing and sends no transaction.
+            </p>
+            <div className="secret-box mono message-box">{request.payload.message}</div>
+            {request.payload.checks.warnings
+              .filter((w) => !w.startsWith("This site is"))
+              .map((w, i) => (
+                <div key={i} className="callout warn">
+                  <IconWarning size={16} />
+                  {w}
+                </div>
+              ))}
+            <div className="review-rows">
+              <div className="kv">
+                <span>Account</span>
+                <span className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Identicon address={request.payload.address} size={14} />
+                  {truncateAddress(request.payload.address, 6)}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
         {kind === "signTransaction" && (
           <>
             <h1>{request.payload.send ? "Approve transaction" : "Sign transaction"}</h1>
@@ -151,7 +185,7 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
           Reject
         </Btn>
         <Btn size="lg" onClick={() => void resolve(true)}>
-          {kind === "connect" ? "Connect" : "Approve"}
+          {kind === "connect" ? "Connect" : kind === "signIn" ? "Sign in" : "Approve"}
         </Btn>
       </div>
     </div>
