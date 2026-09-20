@@ -294,7 +294,7 @@ function NewPhraseSheet({ mnemonic, onClose, onConfirm, busy }: { mnemonic: stri
           </div>
         ))}
       </div>
-      <button className="link-btn" onClick={() => void copy(mnemonic, "Phrase copied")}>
+      <button className="link-btn" onClick={() => void copy(mnemonic, "Phrase copied — clear your clipboard after", true)}>
         <IconCopy size={14} /> Copy
       </button>
       <label className="checkline">
@@ -407,7 +407,7 @@ function RevealSheet({ kind, fetchSecret, onClose }: { kind: "phrase" | "key"; f
       ) : (
         <>
           <div className={`secret-box mono ${kind === "key" ? "wrap-any" : ""}`}>{secret}</div>
-          <Btn size="lg" variant="outline" onClick={() => void copy(secret, "Copied — clear your clipboard after")}>
+          <Btn size="lg" variant="outline" onClick={() => void copy(secret, "Copied — clear your clipboard after", true)}>
             <IconCopy size={16} /> Copy
           </Btn>
         </>

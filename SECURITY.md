@@ -10,7 +10,7 @@ This document serves as a persistent memory bank of all expert-level security ha
 
 ### 1.2 Zero-Trust API Architecture (Jupiter Swap)
 *   **The Threat:** Supply-chain API attacks. If the Jupiter Swap API was compromised, it could return a malicious transaction payload that sends funds directly to an attacker instead of swapping.
-*   **The Defense:** Swap.tsx locally **simulates** the transaction returned by Jupiter *before* signing, and aborts if it will fail. It then verifies the *input* outflow against the quote: for **SOL-spend swaps** it blocks when the simulated SOL outflow exceeds the quoted input by more than a small fee buffer; for **SPL-token swaps** it reads the input token account under simulation and blocks when it is debited more than ~1% over the quoted amount (see `simulateTokenSpend` in src/lib/txanalyze.ts). Both are defence-in-depth heuristics, not guarantees — they cover the *input* asset being swapped (not arbitrary unrelated balances) and assume the classic SPL Token program; if the balance can't be read the swap is not blocked.
+*   **The Defense:** Swap.tsx locally **simulates** the transaction returned by Jupiter *before* signing, and aborts if it will fail. It then verifies the *input* outflow against the quote: for **SOL-spend swaps** it blocks when the simulated SOL outflow exceeds the quoted input by more than a small fee buffer; for **SPL-token swaps** it reads the input token account under simulation and blocks when it is debited more than ~1% over the quoted amount (see `simulateTokenSpend` in src/lib/txanalyze.ts). Both are defence-in-depth heuristics, not guarantees — they cover the *input* asset being swapped (not arbitrary unrelated balances) and resolve the mint's real token program (classic or Token-2022) before deriving the ATA; if the balance can't be read the swap is not blocked.
 
 ### 1.3 Price Feed Sanity Bounds
 *   **The Threat:** Compromised fiat (CoinGecko) APIs could return mathematically impossible values (e.g., SOL = $1,000,000 or NaN) to cause UI spoofing or crashes.
@@ -64,3 +64,30 @@ This document serves as a persistent memory bank of all expert-level security ha
 ### 4.3 Honesty pass on this document + LICENSE
 *   Softened claims that stated heuristics or aspirations as guarantees ("API compromise detected", "100% deterministic", "Tails-OS level verification"). Fixed a malformed bound in §1.3.
 *   **Why:** For a wallet, overstating security manufactures false confidence, which is itself a risk. Added an MIT `LICENSE` (previously missing — nobody could legally reuse the code) with an explicit "not audited, no warranty" security notice, and removed a stray `test-tx.ts` scratch file whose own tx-detection used the flawed approach already fixed in the real code.
+
+## 5. Hardening pass (2026-09-20)
+
+### 5.1 Argon2id replaces PBKDF2 for the vault
+*   **The Threat:** the realistic attack is not breaking AES — it is someone obtaining the encrypted vault (malware, disk forensics, a synced profile, a backup) and grinding passwords offline. PBKDF2-SHA256 is cheap to accelerate on GPUs/ASICs, so raising the iteration count buys comparatively little.
+*   **The Defense:** Argon2id (t=3, m=64 MiB, p=1) via `@noble/hashes` — no new dependency. Each guess now costs real memory, which is what actually prices an attacker out. Existing PBKDF2 vaults still open and are transparently re-encrypted on the next unlock, so nobody is locked out. Covered by `tests/crypto.test.ts`, including the legacy-migration path.
+
+### 5.2 Password policy
+*   **The Threat:** a memory-hard KDF does nothing for a password that sits in the attacker's first thousand guesses.
+*   **The Defense:** `src/lib/password.ts` enforces a 10-character minimum and rejects common passwords (including leetspeak variants), keyboard/alphabet runs, and low-variety strings, on both create and change. Dependency-free — a wallet should not pull a multi-megabyte wordlist into the bundle, and this catches the failure modes that actually occur.
+
+### 5.3 Token-2022 no longer fail-opens in the swap drain check
+*   **The Threat:** `simulateTokenSpend` derived the associated token account assuming the classic SPL Token program. For a Token-2022 mint that yields the wrong address, the balance read fails, and the check silently returns "no opinion" — on exactly the token type that can carry transfer fees and a permanent delegate.
+*   **The Defense:** resolve the mint account's owner (which *is* its token program) and derive the ATA under it.
+
+### 5.4 CSP locked down
+*   Moved from `script-src 'self'; object-src 'self'` to a `default-src 'none'` baseline with explicit allowances, plus `base-uri 'none'`, `form-action 'none'`, `frame-src 'none'` and `frame-ancestors 'none'`. `connect-src` stays broad because users may point the wallet at an arbitrary custom RPC; that remains a documented trade-off rather than a silent one.
+
+### 5.5 Homograph / punycode warning
+*   Every approval screen (connect, sign-in, sign message, sign transaction) now warns when the requesting origin is a punycode domain, which can render as a familiar-looking name.
+
+### 5.6 Clipboard auto-clear made honest
+*   **What was wrong:** the 25-second clipboard wipe ran on a `setTimeout` inside the popup. Chrome destroys the popup when it loses focus — exactly what happens when the user switches away to paste — so the timer almost never fired. When it *did* fire (popup left open) it wiped an address the user had not pasted yet. It mostly did not help, and occasionally did harm.
+*   **The fix:** the auto-clear now applies only to secrets (recovery phrase, private key) and is documented as best-effort. The user-facing "clear your clipboard after" guidance is the real control.
+
+### 5.7 Removed `signMessageLocal`
+*   Dead code with no caller that signed raw bytes with the active key and no transaction guard. Deleted rather than guarded — an unreachable signing primitive is still a signing primitive.

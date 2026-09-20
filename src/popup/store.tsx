@@ -76,14 +76,19 @@ export function useCopy() {
   const { toast } = useStore();
   const timer = useRef<number | null>(null);
   return useCallback(
-    async (text: string, label = "Copied") => {
+    async (text: string, label = "Copied", sensitive = false) => {
       try {
         await navigator.clipboard.writeText(text);
         toast(label, "success");
-        if (timer.current) window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => {
-          navigator.clipboard.writeText("").catch(() => {});
-        }, 25000);
+        // Only auto-clear secrets. This is best-effort: Chrome destroys the
+        // popup when it loses focus, so the timer usually never fires — the
+        // user-facing guidance to clear the clipboard is the real control.
+        if (sensitive) {
+          if (timer.current) window.clearTimeout(timer.current);
+          timer.current = window.setTimeout(() => {
+            navigator.clipboard.writeText("").catch(() => {});
+          }, 25000);
+        }
       } catch {
         toast("Copy failed", "error");
       }

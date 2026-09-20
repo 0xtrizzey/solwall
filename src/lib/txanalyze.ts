@@ -147,9 +147,9 @@ async function simulateTokenAccountAmount(conn: Connection, bytes: Uint8Array, a
 /**
  * Raw amount of `mint` the owner SPENDS under simulation (current − post), or
  * null if it can't be determined. Guards a swap against an API that returns a
- * transaction draining more of the *input token* than quoted. Assumes the
- * classic SPL Token program (the swap UI's token list is all classic SPL); if
- * the ATA can't be read the check simply returns null and does not block.
+ * transaction draining more of the *input token* than quoted. Resolves the
+ * mint's real token program (classic or Token-2022) before deriving the ATA; if
+ * the ATA can't be read the check returns null and does not block.
  */
 export async function simulateTokenSpend(
   conn: Connection,
@@ -158,7 +158,14 @@ export async function simulateTokenSpend(
   mint: string,
 ): Promise<bigint | null> {
   try {
-    const ata = getAssociatedTokenAddress(new PublicKey(mint), new PublicKey(owner));
+    const mintPk = new PublicKey(mint);
+    // The mint account's owner IS its token program. Assuming the classic
+    // program derives the wrong ATA for Token-2022 mints, which made the
+    // drain check silently fail-open on exactly the token type that carries
+    // transfer fees and permanent-delegate risk.
+    const mintInfo = await conn.getAccountInfo(mintPk).catch(() => null);
+    const program = mintInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    const ata = getAssociatedTokenAddress(mintPk, new PublicKey(owner), program);
     const [currentRaw, postRaw] = await Promise.all([
       conn.getTokenAccountBalance(ata).then((r) => BigInt(r.value.amount)).catch(() => null),
       simulateTokenAccountAmount(conn, txBytes, ata).catch(() => null),

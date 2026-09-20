@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { isValidMnemonic, newMnemonic, type SchemeId } from "../../lib/keyring";
+import { MIN_PASSWORD_LENGTH, assessPassword } from "../../lib/password";
 import type { Snapshot } from "../../lib/types";
 import { bg } from "../bg";
 import { Btn, Field, Sheet } from "../components";
@@ -149,7 +150,7 @@ function CreatePhrase({ mnemonic, onBack, onNext }: { mnemonic: string; onBack: 
           </button>
         )}
       </div>
-      <button className="link-btn" onClick={() => void copy(mnemonic, "Phrase copied — clear your clipboard after")}>
+      <button className="link-btn" onClick={() => void copy(mnemonic, "Phrase copied — clear your clipboard after", true)}>
         <IconCopy size={14} /> Copy to clipboard
       </button>
       <div className="callout warn">
@@ -319,11 +320,11 @@ function PasswordStep({ secret, onBack }: { secret: { mnemonic?: string; secretK
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const strength = pw.length >= 14 ? "strong" : pw.length >= 10 ? "good" : pw.length >= 8 ? "okay" : "too short";
+  const assessment = assessPassword(pw);
 
   const submit = async () => {
-    if (pw.length < 8) {
-      setError("Use at least 8 characters.");
+    if (!assessment.ok) {
+      setError(assessment.issues[0] ?? `Password is too weak (${assessment.label}).`);
       return;
     }
     if (pw !== pw2) {
@@ -351,7 +352,7 @@ function PasswordStep({ secret, onBack }: { secret: { mnemonic?: string; secretK
         type="password"
         value={pw}
         onChange={(e) => setPw(e.target.value)}
-        hint={pw ? `Strength: ${strength}` : "At least 8 characters"}
+        hint={pw ? `Strength: ${assessment.label}${assessment.issues[0] ? " — " + assessment.issues[0] : ""}` : `At least ${MIN_PASSWORD_LENGTH} characters — this is what protects your keys if the vault file is stolen`}
         autoFocus
       />
       <Field

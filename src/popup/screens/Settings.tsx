@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FIAT_CURRENCIES } from "../../lib/prices";
 import { truncateAddress } from "../../lib/format";
 import { NETWORKS, type NetworkId, type Snapshot } from "../../lib/types";
+import { MIN_PASSWORD_LENGTH, assessPassword } from "../../lib/password";
 import { bg } from "../bg";
 import { Btn, Divider, Field, Row, Sheet } from "../components";
 import { IconCheck, IconChevronR, IconCopy, IconGlobe, IconKey, IconLink, IconLock, IconShield, IconTrash, IconWallet, IconWarning } from "../icons";
@@ -118,7 +119,7 @@ export function Settings({ snap, nav }: { snap: Snapshot; nav: (r: string) => vo
           </div>
         </div>
         <p className="sheet-text" style={{ marginTop: "1rem" }}>
-          Your vault is encrypted with your password (AES-256-GCM, 1.2M-round PBKDF2). Recovery phrases and private keys can be
+          Your vault is encrypted with your password (AES-256-GCM, Argon2id memory-hard key derivation). Recovery phrases and private keys can be
           revealed per wallet from <strong>Wallets &amp; accounts</strong> — password required every time.
         </p>
         <Divider />
@@ -260,7 +261,8 @@ function ChangePasswordSheet({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (newPw.length < 8) return setError("New password must be at least 8 characters.");
+    const assessment = assessPassword(newPw);
+    if (!assessment.ok) return setError(assessment.issues[0] ?? `Password is too weak (${assessment.label}).`);
     if (newPw !== confirm) return setError("New passwords don't match.");
     setBusy(true);
     setError(null);
@@ -278,7 +280,13 @@ function ChangePasswordSheet({ onDone }: { onDone: () => void }) {
   return (
     <>
       <Field label="Current password" type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} autoFocus />
-      <Field label="New password" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} hint="At least 8 characters" />
+      <Field
+        label="New password"
+        type="password"
+        value={newPw}
+        onChange={(e) => setNewPw(e.target.value)}
+        hint={newPw ? `Strength: ${assessPassword(newPw).label}${assessPassword(newPw).issues[0] ? " — " + assessPassword(newPw).issues[0] : ""}` : `At least ${MIN_PASSWORD_LENGTH} characters`}
+      />
       <Field label="Confirm new password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={error} />
       <Btn size="lg" loading={busy} disabled={!oldPw || !newPw} onClick={() => void submit()}>
         Change password

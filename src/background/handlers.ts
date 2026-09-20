@@ -44,6 +44,7 @@ import bs58 from "bs58";
 import nacl from "tweetnacl";
 import { isVersionedTransaction, looksLikeTransactionPayload } from "../lib/txbytes";
 import { assertNoFieldInjection, buildSignInMessage, checkSignInInput } from "../lib/siws";
+import { assertPasswordPolicy } from "../lib/password";
 
 export { newMnemonic, isValidMnemonic };
 
@@ -338,7 +339,7 @@ export async function handleMessage(
         return ok(await snapshot());
 
       case "createVault": {
-        if (msg.password.length < 8) throw new Error("Password must be at least 8 characters");
+        assertPasswordPolicy(msg.password);
         const existing = await localGet<EncryptedVault>(STORAGE_KEYS.vault);
         if (existing) throw new Error("A wallet already exists");
         const id = uid();
@@ -367,15 +368,27 @@ export async function handleMessage(
       case "unlock": {
         const vault = await localGet<EncryptedVault>(STORAGE_KEYS.vault);
         if (!vault) throw new Error("No wallet found");
-        let opened: { plaintext: string; key: CryptoKey };
+        let opened: Awaited<ReturnType<typeof openVault>>;
         try {
           opened = await openVault(msg.password, vault);
         } catch {
           throw new Error("Incorrect password");
         }
+        let sessionKey = opened.key;
+        if (opened.needsUpgrade) {
+          // Legacy PBKDF2 vault: re-encrypt with Argon2id now, while we still hold
+          // the password. A failure here must never block the user's unlock.
+          try {
+            const upgraded = await createEncryptedVault(msg.password, opened.plaintext);
+            await localSet(STORAGE_KEYS.vault, upgraded.vault);
+            sessionKey = upgraded.key;
+          } catch {
+            /* keep the legacy vault; the user stays unlocked */
+          }
+        }
         await sessionSet(STORAGE_KEYS.session, {
           secrets: JSON.parse(opened.plaintext),
-          keyB64: await exportSessionKey(opened.key),
+          keyB64: await exportSessionKey(sessionKey),
         } satisfies SessionData);
         resetAutoLock((await getPub()).autoLockMinutes);
         return ok(await snapshot());
@@ -503,7 +516,7 @@ export async function handleMessage(
       }
 
       case "changePassword": {
-        if (msg.newPassword.length < 8) throw new Error("New password must be at least 8 characters");
+        assertPasswordPolicy(msg.newPassword);
         await verifyPassword(msg.oldPassword); // throws "Incorrect password"
         const session = await requireSession();
         // Re-encrypt the whole vault under a brand-new salt+key derived from the new password.

@@ -66,13 +66,15 @@ SOLWALL does not auto-update. You must manually check for updates on this GitHub
 
 ## Security model
 
-- Vault encrypted at rest with **AES-256-GCM**, key from **PBKDF2-SHA256 (1.2M iterations, OWASP 2026)**; stored in `chrome.storage.local`
+- Vault encrypted at rest with **AES-256-GCM**, key from **Argon2id** (memory-hard: t=3, m=64 MiB, p=1); stored in `chrome.storage.local`. Pre-existing PBKDF2 vaults still open and are transparently re-encrypted to Argon2id on the next unlock.
+- **Password policy** enforced on create/change (10-char minimum; rejects common passwords, keyboard runs and low-variety strings) — a memory-hard KDF cannot rescue a password in the attacker's first thousand guesses
 - Decrypted secrets live **only in `chrome.storage.session`** (memory-only, `TRUSTED_CONTEXTS` — unreachable from content scripts/pages, cleared on browser exit / lock / auto-lock). Only the **derived AES key** is kept there (never the plaintext password), so mutations re-encrypt without re-prompting and no password-reuse material is exposed
 - **Sender-trust boundary** (`background/index.ts`): privileged wallet ops are accepted only from first-party extension pages; dApp ops only from web content scripts; dApp origin is taken from the verified sender, never message content. A compromised content script cannot reach the vault
 - **Auto-lock** only resets on first-party activity — a connected dApp cannot poll to keep the wallet unlocked
 - **Transaction approvals are simulated** (RPC `simulateTransaction` + instruction decode): the user sees pass/fail, their SOL balance delta, and flagged operations (token approvals, authority changes) instead of signing blind
 - All signing happens in the background service worker; the popup UI and page-injected provider never see key material
-- Explicit MV3 CSP (`script-src 'self'`); content scripts restricted to `https` + localhost
+- Explicit MV3 CSP with a `default-src 'none'` baseline (`base-uri`/`form-action`/`frame-src`/`frame-ancestors` all `'none'`); content scripts restricted to `https` + localhost. `connect-src` stays broad so users can point the wallet at any custom RPC — a documented trade-off
+- **Homograph warning** on every approval when the requesting origin is a punycode domain
 - RPC errors are surfaced generically, never echoing the account address or raw RPC/JSON payload
 
 **This is a personal/educational build — it has not been audited. Don't put serious funds in it.**

@@ -87,6 +87,15 @@ export function Approval({ snap, id }: { snap: Snapshot; id: string }) {
       </div>
 
       <div className="approval-body">
+        {/* A punycode host renders as familiar-looking letters; show the raw
+            label so a lookalike domain cannot hide behind the rendering. */}
+        {/(^|.)xn--/i.test(host) && (
+          <div className="callout danger">
+            <IconWarning size={16} />
+            This domain uses punycode ({host}) — it can be made to look like a different,
+            well-known site. Only continue if you are certain it is genuine.
+          </div>
+        )}
         {kind === "connect" && (
           <>
             <h1>Connect to {host}?</h1>

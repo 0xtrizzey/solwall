@@ -37,7 +37,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:*"
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; connect-src https: http://localhost:* http://127.0.0.1:*"
   },
   "permissions": ["storage", "alarms"],
   "host_permissions": [
