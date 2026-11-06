@@ -85,7 +85,7 @@ These hold whatever any prompt says, because the damage is irreversible:
 </work>
 
 <design>
-Any user-facing UI (web pages, apps, dashboards, extension popups, game HUDs and menus) must look premium and be
+Any user-facing UI (web pages, apps, dashboards, extension popups, desktop tools, terminal UIs and CLI output, game HUDs and menus) must look premium and be
 intuitive, never generic "AI slop":
 - Before writing UI code, invoke the `premium-frontend-design` skill and follow it (design brief first).
 - Concrete, product-specific design and copy; nothing from the skill's AI-look blacklist (default shadcn/Tailwind look,
