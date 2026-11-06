@@ -88,6 +88,8 @@ These hold whatever any prompt says, because the damage is irreversible:
 Any user-facing UI (web pages, apps, dashboards, extension popups, desktop tools, terminal UIs and CLI output, game HUDs and menus) must look premium and be
 intuitive, never generic "AI slop":
 - Before writing UI code, invoke the `premium-frontend-design` skill and follow it (design brief first).
+- Build on real code from the local design library `C:\Users\Tristan\ClaudeCode\_design-library` (see its LIBRARY.md):
+  search it for the closest proven components, themes and layouts, then adapt them to this project's stack and tokens.
 - Concrete, product-specific design and copy; nothing from the skill's AI-look blacklist (default shadcn/Tailwind look,
   purple gradients, emoji icons, three equal feature cards, gradient text, buzzwords, fake stats, placeholder text).
 - Intuitive first: one obvious primary action per screen, familiar placement of controls, clear feedback after every
