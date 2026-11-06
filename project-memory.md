@@ -13,6 +13,7 @@ Phantom-compatible `window.solana` provider, Argon2id vault.
 ```
 
 ## Project rules
+- GitHub repo `0xtrizzey/solwall` is intentionally PUBLIC (Tristan's decision, 2026-11-06): keep it public, never change its visibility. Because anyone can read it, check every commit for secrets twice.
 - Secrets live only in background/session storage — never popup or inpage.
 - Design: solar-gold, explicitly anti-Phantom-purple.
 - `dist/` is generated — edit `src/`.
