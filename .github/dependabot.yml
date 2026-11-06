@@ -1,0 +1,19 @@
+# Dependabot: weekly grouped updates; security updates come immediately via GitHub's automatic security fixes.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      all-updates:
+        patterns: ["*"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      all-updates:
+        patterns: ["*"]
