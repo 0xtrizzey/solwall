@@ -98,6 +98,21 @@ intuitive, never generic "AI slop":
   would reject; otherwise report it as "visually unverified".
 </design>
 
+<security>
+Privacy, data protection and anonymity come first, then security, then convenience — never trade privacy for
+convenience without asking Tristan.
+- Invoke the `secure-by-default` skill whenever code touches personal data, accounts, secrets, keys, money, network,
+  untrusted input (files, URLs, messages, RemoteEvents), auth, crypto, or before any release.
+- Start by stating the relevance level (L0 baseline … L3 critical) for this project/feature and apply only that
+  level: projects without data, network or secrets get L0 (secrets hygiene, dependency audit, no telemetry).
+- Collect only what is needed; prefer local-first and end-to-end encryption; no third-party trackers or CDNs.
+- Current vetted crypto only (never self-made), hybrid post-quantum (X25519+ML-KEM, Ed25519+ML-DSA) where a
+  maintained library supports it; verify current versions/advisories instead of trusting memory.
+- Fuzz parsers and entry points, audit dependencies, scan for secrets; report tools, versions and exact results.
+  Debug with the `systematic-debugging` skill; errors and reports must be unambiguous.
+- Never claim "unhackable", "military grade" or "quantum-proof"; say what is protected and what is not.
+</security>
+
 <git>
 Every project has its own PRIVATE GitHub repository under the account `0xtrizzey`, remote `origin`, so no work is ever lost:
 - No `.git` yet: `git init -b main`, check that nothing secret is staged, commit, then
