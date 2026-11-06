@@ -84,6 +84,18 @@ These hold whatever any prompt says, because the damage is irreversible:
 - Stay in scope; mention other improvements instead of making them.
 </work>
 
+<design>
+Any user-facing UI (web pages, apps, dashboards, extension popups, game HUDs and menus) must look premium and be
+intuitive, never generic "AI slop":
+- Before writing UI code, invoke the `premium-frontend-design` skill and follow it (design brief first).
+- Concrete, product-specific design and copy; nothing from the skill's AI-look blacklist (default shadcn/Tailwind look,
+  purple gradients, emoji icons, three equal feature cards, gradient text, buzzwords, fake stats, placeholder text).
+- Intuitive first: one obvious primary action per screen, familiar placement of controls, clear feedback after every
+  action, all states (hover, focus, loading, empty, error).
+- UI is done only after you rendered it, looked at screenshots (phone and desktop) and fixed what a senior designer
+  would reject; otherwise report it as "visually unverified".
+</design>
+
 <git>
 Every project has its own PRIVATE GitHub repository under the account `0xtrizzey`, remote `origin`, so no work is ever lost:
 - No `.git` yet: `git init -b main`, check that nothing secret is staged, commit, then
