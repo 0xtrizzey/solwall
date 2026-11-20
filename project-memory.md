@@ -21,6 +21,9 @@ Phantom-compatible `window.solana` provider, Argon2id vault.
 ## Current state
 <!-- one line, maintained by /handoff -->
 
+## Ideas
+<!-- Ideas that came up mid-task. Not built until Tristan picks one. - [YYYY-MM-DD] <idea> -->
+
 ## Lessons
 - [2026-09-19] signMessage: hardening wrapped the payload in an envelope but dApps verified the RAW message → 100% of sign-ins broke with green build → RULE: verify any signing/encoding change against the consumer's verify() in the same session.
 - [2026-09-19] Replay guard only tried Transaction.from(); a bare compiled message is replayable and doesn't parse as a Transaction → RULE: enumerate every serialization (tx + bare message, legacy + versioned) and test on real attack payloads + false-positive corpus.

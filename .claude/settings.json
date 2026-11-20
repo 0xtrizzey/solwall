@@ -5,5 +5,19 @@
       "Read(./.env.*)",
       "Read(./secrets/**)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Users/Tristan/ClaudeCode/_system/hooks/guard-main.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
